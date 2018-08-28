@@ -1,5 +1,5 @@
 """
-Pyfranca lexer and parser tests.
+Pyfranca parser tests.
 """
 
 import unittest
@@ -55,11 +55,182 @@ class TestTopLevel(BaseTestCase):
         """)
 
     def test_structured_comments(self):
-        self._assertParse("""
+        package = self._assertParse("""
             <** @description: Package P
+                              multiline text
+                @author      Jens Baumann
+                @deprecated :
+                @source_uri  https://github.com/zayfod/pyfranca
+                @source_alias : a better franca idl parser
+                @see :    foobar
+                @experimental :
             **>
             package P
         """)
+        self.assertEqual(package.name, "P")
+        self.assertEqual(package.comments["@description"], "Package P\n                              multiline text")
+        self.assertEqual(package.comments["@author"], "Jens Baumann")
+        self.assertEqual(package.comments["@deprecated"], "")
+        self.assertEqual(package.comments["@source_uri"], "https://github.com/zayfod/pyfranca")
+        self.assertEqual(package.comments["@source_alias"], "a better franca idl parser")
+        self.assertEqual(package.comments["@see"], "foobar")
+        self.assertEqual(package.comments["@experimental"], "")
+        self.assertEqual(package.files, [])
+        self.assertEqual(len(package.imports), 0)
+        self.assertEqual(len(package.typecollections), 0)
+        self.assertEqual(len(package.interfaces), 0)
+
+    def test_structured_comments_complete_example(self):
+        package = self._assertParse("""
+                   package P
+
+                   <** @description : collection TC   **>
+                   typeCollection TC {
+
+                       <** @description : struct S   **>
+                       struct S {
+
+                           <** @description : member a   **>
+                           Int32 a
+
+                           <** @description : member b   **>
+                           String b
+                       }
+
+                       <** @description : union U   **>
+                       union U {
+
+                           <** @description : member a   **>
+                           Int32 a
+
+                           <** @description : member b   **>
+                           String b
+                       }
+
+                       <** @description : enumeration E   **>
+                       enumeration E {
+                          <** @description : enum member a   **>
+                          a = 0x1
+                          <** @description : enum member b   **>
+                          b = 0x2
+                       }
+
+                       <** @description : typedef  MyInt8  **>
+                       typedef MyInt8 is Int8
+
+                       <** @description : array A  **>
+                       array A of UInt8
+
+                        <** @description : map M  **>
+                        map M {
+                            String to Int32
+                        }
+                    }
+                    <** @description : interface I **>
+                    interface I {
+                        version { major 1 minor 0 }
+
+                        <** @description : attribute A **>
+                        attribute Int32 A
+
+                        <** @description : method M **>
+                        method M {
+                            in {
+                                <** @description : in parameter a **>
+                                Float a
+
+                                <** @description : in parameter b **>
+                                Float[] b
+                            }
+                            out {
+                                <** @description : out parameter result **>
+                                Float result
+                            }
+                            error {
+                                <** @description : error FAILURE **>
+                                FAILURE = 0
+
+                                <** @description : error SUCCESS **>
+                                SUCCESS
+                            }
+                        }
+
+                        <** @description : broadcast B **>
+                        broadcast B {
+                            out {
+                                <** @description : out parameter x **>
+                                Int32 x
+                            }
+                        }
+                    }
+               """)
+        self.assertEqual(package.name, "P")
+        self.assertEqual(package.files, [])
+        self.assertEqual(len(package.imports), 0)
+        self.assertEqual(len(package.typecollections), 1)
+        self.assertEqual(len(package.interfaces), 1)
+        self.assertEqual(package.typecollections['TC'].comments["@description"], "collection TC")
+        self.assertEqual(package.typecollections['TC'].structs['S'].comments["@description"], "struct S")
+        self.assertEqual(package.typecollections['TC'].structs['S'].fields['a'].comments["@description"], "member a")
+        self.assertEqual(package.typecollections['TC'].structs['S'].fields['b'].comments["@description"], "member b")
+        self.assertEqual(package.typecollections['TC'].unions['U'].comments["@description"], "union U")
+        self.assertEqual(package.typecollections['TC'].unions['U'].fields['a'].comments["@description"], "member a")
+        self.assertEqual(package.typecollections['TC'].unions['U'].fields['b'].comments["@description"], "member b")
+        self.assertEqual(package.typecollections['TC'].enumerations['E'].comments['@description'], "enumeration E")
+        self.assertEqual(package.typecollections['TC'].enumerations['E'].enumerators['a'].value.value, 1)
+        self.assertEqual(
+            package.typecollections['TC'].enumerations['E'].enumerators['a'].comments["@description"],
+            "enum member a")
+        self.assertEqual(package.typecollections['TC'].enumerations['E'].enumerators['b'].value.value, 2)
+        self.assertEqual(
+            package.typecollections['TC'].enumerations['E'].enumerators['b'].comments['@description'],
+            "enum member b")
+
+        self.assertEqual(package.interfaces['I'].comments['@description'], "interface I")
+        self.assertEqual(package.interfaces['I'].attributes['A'].comments['@description'], "attribute A")
+
+        self.assertEqual(package.interfaces['I'].methods['M'].comments['@description'], "method M")
+        self.assertEqual(package.interfaces['I'].methods['M'].in_args['a'].comments['@description'], "in parameter a")
+        self.assertEqual(package.interfaces['I'].methods['M'].in_args['b'].comments['@description'], "in parameter b")
+        self.assertEqual(package.interfaces['I'].methods['M'].out_args['result'].comments['@description'],
+                         "out parameter result")
+        self.assertEqual(package.interfaces['I'].methods['M'].errors['FAILURE'].comments['@description'],
+                         "error FAILURE")
+        self.assertEqual(package.interfaces['I'].methods['M'].errors['SUCCESS'].comments['@description'],
+                         "error SUCCESS")
+        self.assertEqual(package.interfaces['I'].broadcasts['B'].comments['@description'], "broadcast B")
+        self.assertEqual(package.interfaces['I'].broadcasts['B'].out_args['x'].comments['@description'],
+                         "out parameter x")
+
+    def test_empty_comments(self):
+        package = self._assertParse("""
+                    <**  **>
+                    package P
+                """)
+        self.assertEqual(package.name, "P")
+        self.assertEqual(len(package.comments.keys()), 0)
+
+    def test_comments_no_tag(self):
+        package = self._assertParse("""
+                    <** no tag  **>
+                    package P
+                """)
+        self.assertEqual(package.name, "P")
+        self.assertEqual(len(package.comments.keys()), 0)
+
+    def test_bad_comments(self):
+        with self.assertRaises(ParserException) as context:
+            self._parse("""
+            package P
+
+             <** @description : bad comment**>
+
+             <** @description : typeCollection TC **>
+             typeCollection TC {}
+
+        """)
+        self.assertEqual(str(context.exception),
+                         "Syntax error at line 6 near '@description : typeCollection TC'.")
 
     def test_empty_package(self):
         package = self._assertParse("package P")
@@ -134,6 +305,7 @@ class TestTopLevel(BaseTestCase):
         self.assertEqual(len(typecollection.typedefs), 0)
         self.assertEqual(len(typecollection.enumerations), 0)
         self.assertEqual(len(typecollection.structs), 0)
+        self.assertEqual(len(typecollection.unions), 0)
         self.assertEqual(len(typecollection.arrays), 0)
         self.assertEqual(len(typecollection.maps), 0)
 
@@ -157,6 +329,7 @@ class TestTopLevel(BaseTestCase):
         self.assertEqual(len(typecollection.typedefs), 0)
         self.assertEqual(len(typecollection.enumerations), 0)
         self.assertEqual(len(typecollection.structs), 0)
+        self.assertEqual(len(typecollection.unions), 0)
         self.assertEqual(len(typecollection.arrays), 0)
         self.assertEqual(len(typecollection.maps), 0)
         self.assertTrue("TC2" in package.typecollections)
@@ -168,6 +341,7 @@ class TestTopLevel(BaseTestCase):
         self.assertEqual(len(typecollection.typedefs), 0)
         self.assertEqual(len(typecollection.enumerations), 0)
         self.assertEqual(len(typecollection.structs), 0)
+        self.assertEqual(len(typecollection.unions), 0)
         self.assertEqual(len(typecollection.arrays), 0)
         self.assertEqual(len(typecollection.maps), 0)
 
@@ -187,6 +361,7 @@ class TestTopLevel(BaseTestCase):
         self.assertEqual(len(interface.typedefs), 0)
         self.assertEqual(len(interface.enumerations), 0)
         self.assertEqual(len(interface.structs), 0)
+        self.assertEqual(len(interface.unions), 0)
         self.assertEqual(len(interface.arrays), 0)
         self.assertEqual(len(interface.maps), 0)
         self.assertEqual(len(interface.attributes), 0)
@@ -213,6 +388,7 @@ class TestTopLevel(BaseTestCase):
         self.assertEqual(len(interface.typedefs), 0)
         self.assertEqual(len(interface.enumerations), 0)
         self.assertEqual(len(interface.structs), 0)
+        self.assertEqual(len(interface.unions), 0)
         self.assertEqual(len(interface.arrays), 0)
         self.assertEqual(len(interface.maps), 0)
         self.assertEqual(len(interface.attributes), 0)
@@ -227,6 +403,7 @@ class TestTopLevel(BaseTestCase):
         self.assertEqual(len(interface.typedefs), 0)
         self.assertEqual(len(interface.enumerations), 0)
         self.assertEqual(len(interface.structs), 0)
+        self.assertEqual(len(interface.unions), 0)
         self.assertEqual(len(interface.arrays), 0)
         self.assertEqual(len(interface.maps), 0)
         self.assertEqual(len(interface.attributes), 0)
@@ -250,21 +427,6 @@ class TestUnsupported(BaseTestCase):
         self.assertEqual(str(context.exception),
                          "Syntax error at line 3 near '.'.")
 
-    def test_constants(self):
-        """Franca 0.9.2, section 5.2.1"""
-        with self.assertRaises(ParserException) as context:
-            self._parse("""
-                package P
-                typeCollection TC {
-                    const Boolean b1 = true
-                    const UInt32 MAX COUNT = 10000
-                    const String foo = "bar"
-                    const Double pi = 3.1415d
-                }
-            """)
-        self.assertEqual(str(context.exception),
-                         "Syntax error at line 4 near 'const'.")
-
     def test_expressions(self):
         """Franca 0.9.2, section 5.2.1"""
         with self.assertRaises(ParserException) as context:
@@ -277,7 +439,7 @@ class TestUnsupported(BaseTestCase):
                 }
             """)
         self.assertEqual(str(context.exception),
-                         "Syntax error at line 4 near 'const'.")
+                         "Syntax error at line 5 near 'MAX'.")
 
     def test_complex_constants(self):
         """Franca 0.9.2, section 5.2.2"""
@@ -309,22 +471,7 @@ class TestUnsupported(BaseTestCase):
                 }
             """)
         self.assertEqual(str(context.exception),
-                         "Syntax error at line 5 near 'const'.")
-
-    def test_unions(self):
-        """Franca 0.9.2, section 5.1.6"""
-        with self.assertRaises(ParserException) as context:
-            self._parse("""
-                package P
-                typeCollection TC {
-                    union ExampleUnion {
-                        UInt32 element1
-                        Float element2
-                    }
-                }
-            """)
-        self.assertEqual(str(context.exception),
-                         "Syntax error at line 4 near 'union'.")
+                         "Syntax error at line 5 near 'Array1'.")
 
     def test_error_extending(self):
         """Franca 0.9.2, section 5.5.3"""
@@ -505,6 +652,12 @@ class TestMisc(BaseTestCase):
                 struct S2 extends S {}
                 struct S3 polymorphic {}
 
+                union U {
+                    Int32 a
+                    Int32[] b
+                }
+                union U2 extends U {}
+
                 array A of UInt8
 
                 map M {
@@ -556,6 +709,11 @@ class TestMisc(BaseTestCase):
                     Int32[] b
                 }
 
+                union IU {
+                    Int32 a
+                    Int32[] b
+                }
+
                 array IA of UInt8
 
                 map IM {
@@ -586,6 +744,7 @@ class TestTypeCollections(BaseTestCase):
         self.assertEqual(len(tc.typedefs), 0)
         self.assertEqual(len(tc.enumerations), 0)
         self.assertEqual(len(tc.structs), 0)
+        self.assertEqual(len(tc.unions), 0)
         self.assertEqual(len(tc.arrays), 0)
         self.assertEqual(len(tc.maps), 0)
 
@@ -643,6 +802,7 @@ class TestInterfaces(BaseTestCase):
         self.assertEqual(len(i.typedefs), 0)
         self.assertEqual(len(i.enumerations), 0)
         self.assertEqual(len(i.structs), 0)
+        self.assertEqual(len(i.unions), 0)
         self.assertEqual(len(i.arrays), 0)
         self.assertEqual(len(i.maps), 0)
         self.assertEqual(len(i.attributes), 0)
@@ -703,7 +863,7 @@ class TestEnumerations(BaseTestCase):
         self.assertEqual(len(e.enumerators), 2)
         ee = e.enumerators["FALSE"]
         self.assertEqual(ee.name, "FALSE")
-        self.assertEqual(ee.value, 0)
+        self.assertEqual(ee.value.value, 0)
         ee = e.enumerators["TRUE"]
         self.assertEqual(ee.name, "TRUE")
         self.assertIsNone(ee.value)
@@ -713,6 +873,83 @@ class TestEnumerations(BaseTestCase):
         self.assertEqual(e2.extends, "E")
         self.assertEqual(e2.flags, [])
         self.assertEqual(len(e2.enumerators), 0)
+
+    def test_hexvalue(self):
+        package = self._assertParse("""
+            package P
+            typeCollection TC {
+                enumeration E {
+                    A = 0xA
+                    B = 0XABC
+                }
+                enumeration E2 extends E {}
+            }
+        """)
+        typecollection = package.typecollections["TC"]
+        e = typecollection.enumerations["E"]
+        self.assertEqual(e.namespace, typecollection)
+        self.assertEqual(e.name, "E")
+        self.assertIsNone(e.extends)
+        self.assertEqual(e.flags, [])
+        self.assertEqual(len(e.enumerators), 2)
+        ee = e.enumerators["A"]
+        self.assertEqual(ee.name, "A")
+        self.assertEqual(ee.value.value, 10)
+        ee = e.enumerators["B"]
+        self.assertEqual(ee.name, "B")
+        self.assertEqual(ee.value.value, 0xABC)
+        e2 = typecollection.enumerations["E2"]
+        self.assertEqual(e2.namespace, typecollection)
+        self.assertEqual(e2.name, "E2")
+        self.assertEqual(e2.extends, "E")
+        self.assertEqual(e2.flags, [])
+        self.assertEqual(len(e2.enumerators), 0)
+
+    def test_binvalue(self):
+        package = self._assertParse("""
+            package P
+            typeCollection TC {
+                enumeration E {
+                    A = 0b10
+                    B = 0B011
+                }
+                enumeration E2 extends E {}
+            }
+        """)
+        typecollection = package.typecollections["TC"]
+        e = typecollection.enumerations["E"]
+        self.assertEqual(e.namespace, typecollection)
+        self.assertEqual(e.name, "E")
+        self.assertIsNone(e.extends)
+        self.assertEqual(e.flags, [])
+        self.assertEqual(len(e.enumerators), 2)
+        ee = e.enumerators["A"]
+        self.assertEqual(ee.name, "A")
+        self.assertEqual(ee.value.value, 0b10)
+        ee = e.enumerators["B"]
+        self.assertEqual(ee.name, "B")
+        self.assertEqual(ee.value.value, 0b011)
+        e2 = typecollection.enumerations["E2"]
+        self.assertEqual(e2.namespace, typecollection)
+        self.assertEqual(e2.name, "E2")
+        self.assertEqual(e2.extends, "E")
+        self.assertEqual(e2.flags, [])
+        self.assertEqual(len(e2.enumerators), 0)
+
+    def test_badvalue(self):
+        with self.assertRaises(ParserException) as context:
+            self._parse("""
+            package P
+            typeCollection TC {
+                enumeration E {
+                    A = 0.123f
+                    B = 0xABC
+                }
+                enumeration E2 extends E {}
+            }
+        """)
+        self.assertEqual(str(context.exception),
+                         "Syntax error at line 5 near '0.123f'.")
 
     def test_duplicate_enumerator(self):
         with self.assertRaises(ParserException) as context:
@@ -799,6 +1036,71 @@ class TestStructs(BaseTestCase):
                          "Duplicate structure field 'a'.")
 
 
+class TestUnions(BaseTestCase):
+    """Test parsing unions."""
+
+    def test_normal(self):
+        package = self._assertParse("""
+            package P
+            typeCollection TC {
+                union U {
+                    Int32 a
+                    String b
+                }
+                union U2 extends U {}
+            }
+            interface I {
+                union U3 {
+                    Int32 a
+                    String b
+                }
+            }
+        """)
+        typecollection = package.typecollections["TC"]
+        u = typecollection.unions["U"]
+        self.assertEqual(u.name, "U")
+        self.assertIsNone(u.extends)
+        self.assertEqual(u.namespace, typecollection)
+        self.assertEqual(len(u.fields), 2)
+        self.assertEqual(u.fields["a"].name, "a")
+        self.assertIsInstance(u.fields["a"].type, ast.Int32)
+        self.assertEqual(u.fields["b"].name, "b")
+        self.assertIsInstance(u.fields["b"].type, ast.String)
+        self.assertEqual(len(u.flags), 0)
+        u2 = typecollection.unions["U2"]
+        self.assertEqual(u2.name, "U2")
+        self.assertEqual(u2.extends, "U")
+        self.assertEqual(len(u2.fields), 0)
+        self.assertEqual(u2.namespace, typecollection)
+        self.assertEqual(len(u2.flags), 0)
+        interface = package.interfaces["I"]
+        self.assertEqual(len(interface.unions), 1)
+        u3 = interface.unions["U3"]
+        self.assertEqual(u3.name, "U3")
+        self.assertIsNone(u3.extends)
+        self.assertEqual(u3.namespace, interface)
+        self.assertEqual(len(u3.fields), 2)
+        self.assertEqual(u3.fields["a"].name, "a")
+        self.assertIsInstance(u3.fields["a"].type, ast.Int32)
+        self.assertEqual(u3.fields["b"].name, "b")
+        self.assertIsInstance(u3.fields["b"].type, ast.String)
+        self.assertEqual(len(u3.flags), 0)
+
+    def test_duplicate_field(self):
+        with self.assertRaises(ParserException) as context:
+            self._parse("""
+                package P
+                typeCollection TC {
+                    union U {
+                        Int32 a
+                        String a
+                    }
+                }
+            """)
+        self.assertEqual(str(context.exception),
+                         "Duplicate union field 'a'.")
+
+
 class TestMethods(BaseTestCase):
     """Test parsing methods."""
 
@@ -836,3 +1138,274 @@ class TestBroadcasts(BaseTestCase):
                 }
             """)
         self.assertEqual(str(context.exception), "Duplicate argument 'a'.")
+
+
+class TestConstants(BaseTestCase):
+    """Test parsing constants."""
+    def test_constants(self):
+        """Franca 0.9.2, section 5.2.1"""
+        package = self._parse("""
+            package P
+            typeCollection TC {
+                const UInt32 MAX_COUNT = 10000
+                const UInt32 MAX_COUNT_HEX = 0x10000
+                const UInt32 MAX_COUNT_BIN = 0b10000
+                const Double pi = 3.1415d
+                const Float f1 = 1.2f
+                const Float f2 = 6.022e23f
+                const Boolean b1 = true
+                const Boolean b2 = false
+
+                const String s1 = "Hello"
+
+                const String s2 = "Hello
+                                   World"
+            }
+        """)
+        self.assertEqual(package.name, "P")
+        self.assertEqual(package.files, [])
+        self.assertEqual(len(package.imports), 0)
+        self.assertEqual(len(package.typecollections), 1)
+        self.assertEqual(len(package.interfaces), 0)
+        self.assertTrue("TC" in package.typecollections)
+        typecollection = package.typecollections["TC"]
+        self.assertEqual(typecollection.package, package)
+        self.assertEqual(typecollection.name, "TC")
+        self.assertListEqual(typecollection.flags, [])
+        self.assertIsNone(typecollection.version)
+        self.assertEqual(len(typecollection.typedefs), 0)
+        self.assertEqual(len(typecollection.enumerations), 0)
+        self.assertEqual(len(typecollection.structs), 0)
+        self.assertEqual(len(typecollection.unions), 0)
+        self.assertEqual(len(typecollection.arrays), 0)
+        self.assertEqual(len(typecollection.maps), 0)
+        self.assertEqual(len(typecollection.constants), 10)
+
+        self.assertEqual(typecollection.constants["MAX_COUNT"].name, "MAX_COUNT")
+        self.assertEqual(typecollection.constants["MAX_COUNT"].type.name, "UInt32")
+        self.assertEqual(typecollection.constants["MAX_COUNT"].value.value, 10000)
+        self.assertEqual(typecollection.constants["MAX_COUNT"].value.name, "IntegerValue")
+        self.assertEqual(typecollection.constants["MAX_COUNT"].value.base, ast.IntegerValue.DECIMAL)
+
+        self.assertEqual(typecollection.constants["MAX_COUNT_HEX"].name, "MAX_COUNT_HEX")
+        self.assertEqual(typecollection.constants["MAX_COUNT_HEX"].type.name, "UInt32")
+        self.assertEqual(typecollection.constants["MAX_COUNT_HEX"].value.value, 0x10000)
+        self.assertEqual(typecollection.constants["MAX_COUNT_HEX"].value.name, "IntegerValue")
+        self.assertEqual(typecollection.constants["MAX_COUNT_HEX"].value.base, ast.IntegerValue.HEXADECIMAL)
+
+        self.assertEqual(typecollection.constants["MAX_COUNT_BIN"].name, "MAX_COUNT_BIN")
+        self.assertEqual(typecollection.constants["MAX_COUNT_BIN"].type.name, "UInt32")
+        self.assertEqual(typecollection.constants["MAX_COUNT_BIN"].value.value, 0b10000)
+        self.assertEqual(typecollection.constants["MAX_COUNT_BIN"].value.name, "IntegerValue")
+        self.assertEqual(typecollection.constants["MAX_COUNT_BIN"].value.base, ast.IntegerValue.BINARY)
+
+        self.assertEqual(typecollection.constants["pi"].name, "pi")
+        self.assertEqual(typecollection.constants["pi"].type.name, "Double")
+        self.assertEqual(typecollection.constants["pi"].value.value, 3.1415)
+        self.assertEqual(typecollection.constants["pi"].value.name, "DoubleValue")
+
+        self.assertEqual(typecollection.constants["f1"].name, "f1")
+        self.assertEqual(typecollection.constants["f1"].type.name, "Float")
+        self.assertAlmostEqual(typecollection.constants["f1"].value.value, 1.2)
+        self.assertEqual(typecollection.constants["f1"].value.name, "FloatValue")
+
+        self.assertEqual(typecollection.constants["f2"].name, "f2")
+        self.assertEqual(typecollection.constants["f2"].type.name, "Float")
+        self.assertAlmostEqual(typecollection.constants["f2"].value.value, 6.022e23)
+        self.assertEqual(typecollection.constants["f2"].value.name, "FloatValue")
+
+        self.assertEqual(typecollection.constants["b1"].name, "b1")
+        self.assertEqual(typecollection.constants["b1"].type.name, "Boolean")
+        self.assertEqual(typecollection.constants["b1"].value.value, True)
+        self.assertEqual(typecollection.constants["b1"].value.name, "BooleanValue")
+
+        self.assertEqual(typecollection.constants["b2"].name, "b2")
+        self.assertEqual(typecollection.constants["b2"].type.name, "Boolean")
+        self.assertEqual(typecollection.constants["b2"].value.value, False)
+        self.assertEqual(typecollection.constants["b2"].value.name, "BooleanValue")
+
+        self.assertEqual(typecollection.constants["s1"].name, "s1")
+        self.assertEqual(typecollection.constants["s1"].type.name, "String")
+        self.assertAlmostEqual(typecollection.constants["s1"].value.value, "Hello")
+        self.assertEqual(typecollection.constants["s1"].value.name, "StringValue")
+
+        self.assertEqual(typecollection.constants["s2"].name, "s2")
+        self.assertEqual(typecollection.constants["s2"].type.name, "String")
+        self.assertAlmostEqual(typecollection.constants["s2"].value.value,
+                               "Hello\n                                   World")
+        self.assertEqual(typecollection.constants["s2"].value.name, "StringValue")
+
+    def test_constants_casting(self):
+        """Franca 0.9.2, section 5.2.1"""
+        package = self._parse("""
+            package P
+            typeCollection TC {
+                const Float f1 = 123
+                const Float f2 = true
+                const Double d1 = 123
+                const Double d2 = true
+                const Boolean b1 = 123
+                const Boolean b2 = 123.0f
+                const Boolean b3 = 0.0d
+                const Boolean b4 = "123"
+                const String s1 = 123
+                const String s2 = 123.0f
+                const String s3 = 0.0d
+                const String s4 = true
+            }
+        """)
+        self.assertEqual(package.name, "P")
+        self.assertEqual(package.files, [])
+        self.assertEqual(len(package.imports), 0)
+        self.assertEqual(len(package.typecollections), 1)
+        self.assertEqual(len(package.interfaces), 0)
+        self.assertTrue("TC" in package.typecollections)
+        typecollection = package.typecollections["TC"]
+        self.assertEqual(typecollection.package, package)
+        self.assertEqual(typecollection.name, "TC")
+        self.assertListEqual(typecollection.flags, [])
+        self.assertIsNone(typecollection.version)
+        self.assertEqual(len(typecollection.typedefs), 0)
+        self.assertEqual(len(typecollection.enumerations), 0)
+        self.assertEqual(len(typecollection.structs), 0)
+        self.assertEqual(len(typecollection.unions), 0)
+        self.assertEqual(len(typecollection.arrays), 0)
+        self.assertEqual(len(typecollection.maps), 0)
+        self.assertEqual(len(typecollection.constants), 12)
+
+        x = "f1"
+        self.assertEqual(typecollection.constants[x].name, x)
+        self.assertEqual(typecollection.constants[x].type.name, "Float")
+        self.assertAlmostEqual(typecollection.constants[x].value.value, 123.0)
+        self.assertEqual(typecollection.constants[x].value.name, "FloatValue")
+
+        x = "f2"
+        self.assertEqual(typecollection.constants[x].name, x)
+        self.assertEqual(typecollection.constants[x].type.name, "Float")
+        self.assertAlmostEqual(typecollection.constants[x].value.value, 1.0)
+        self.assertEqual(typecollection.constants[x].value.name, "FloatValue")
+
+        x = "d1"
+        self.assertEqual(typecollection.constants[x].name, x)
+        self.assertEqual(typecollection.constants[x].type.name, "Double")
+        self.assertAlmostEqual(typecollection.constants[x].value.value, 123.0)
+        self.assertEqual(typecollection.constants[x].value.name, "DoubleValue")
+
+        x = "d2"
+        self.assertEqual(typecollection.constants[x].name, x)
+        self.assertEqual(typecollection.constants[x].type.name, "Double")
+        self.assertAlmostEqual(typecollection.constants[x].value.value, 1.0)
+        self.assertEqual(typecollection.constants[x].value.name, "DoubleValue")
+
+        x = "b1"
+        self.assertEqual(typecollection.constants[x].name, x)
+        self.assertEqual(typecollection.constants[x].type.name, "Boolean")
+        self.assertAlmostEqual(typecollection.constants[x].value.value, True)
+        self.assertEqual(typecollection.constants[x].value.name, "BooleanValue")
+
+        x = "b2"
+        self.assertEqual(typecollection.constants[x].name, x)
+        self.assertEqual(typecollection.constants[x].type.name, "Boolean")
+        self.assertAlmostEqual(typecollection.constants[x].value.value, True)
+        self.assertEqual(typecollection.constants[x].value.name, "BooleanValue")
+
+        x = "b3"
+        self.assertEqual(typecollection.constants[x].name, x)
+        self.assertEqual(typecollection.constants[x].type.name, "Boolean")
+        self.assertAlmostEqual(typecollection.constants[x].value.value, False)
+        self.assertEqual(typecollection.constants[x].value.name, "BooleanValue")
+
+        x = "b4"
+        self.assertEqual(typecollection.constants[x].name, x)
+        self.assertEqual(typecollection.constants[x].type.name, "Boolean")
+        self.assertAlmostEqual(typecollection.constants[x].value.value, True)
+        self.assertEqual(typecollection.constants[x].value.name, "BooleanValue")
+
+        x = "s1"
+        self.assertEqual(typecollection.constants[x].name, x)
+        self.assertEqual(typecollection.constants[x].type.name, "String")
+        self.assertAlmostEqual(typecollection.constants[x].value.value, "123")
+        self.assertEqual(typecollection.constants[x].value.name, "StringValue")
+
+        x = "s2"
+        self.assertEqual(typecollection.constants[x].name, x)
+        self.assertEqual(typecollection.constants[x].type.name, "String")
+        self.assertAlmostEqual(typecollection.constants[x].value.value, "123.0")
+        self.assertEqual(typecollection.constants[x].value.name, "StringValue")
+
+        x = "s3"
+        self.assertEqual(typecollection.constants[x].name, x)
+        self.assertEqual(typecollection.constants[x].type.name, "String")
+        self.assertAlmostEqual(typecollection.constants[x].value.value, "0.0")
+        self.assertEqual(typecollection.constants[x].value.name, "StringValue")
+
+        x = "s4"
+        self.assertEqual(typecollection.constants[x].name, x)
+        self.assertEqual(typecollection.constants[x].type.name, "String")
+        self.assertAlmostEqual(typecollection.constants[x].value.value, "True")
+        self.assertEqual(typecollection.constants[x].value.name, "StringValue")
+
+    def test_constants_bad_syntax_Uint32(self):
+        """Franca 0.9.2, section 5.2.1"""
+
+        with self.assertRaises(ParserException) as context:
+            self._parse("""
+            package P
+            typeCollection TC {
+                const UInt32 MAX_COUNT = "Hello"
+            }
+        """)
+        self.assertEqual(str(context.exception),
+                         "Syntax error at line 4 near 'Hello'.")
+
+    def test_constants_bad_syntax_String(self):
+        """Franca 0.9.2, section 5.2.1"""
+
+        with self.assertRaises(ParserException) as context:
+            self._parse("""
+            package P
+            typeCollection TC {
+                const String s1 = 123abc
+            }
+        """)
+        self.assertEqual(str(context.exception),
+                         "Syntax error at line 4 near 'abc'.")
+
+    def test_constants_bad_syntax_Boolean(self):
+        """Franca 0.9.2, section 5.2.1"""
+
+        with self.assertRaises(ParserException) as context:
+            self._parse("""
+            package P
+            typeCollection TC {
+                const Boolean b1 = 123asc
+            }
+        """)
+        self.assertEqual(str(context.exception),
+                         "Syntax error at line 4 near 'asc'.")
+
+    def test_constants_bad_syntax_typename(self):
+        """Franca 0.9.2, section 5.2.1"""
+
+        with self.assertRaises(ParserException) as context:
+            self._parse("""
+            package P
+            typeCollection TC {
+                const double d1 = 123.3d
+            }
+        """)
+        self.assertEqual(str(context.exception),
+                         "Syntax error at line 4 near 'double'.")
+
+    def test_constants_bad_syntax_hexvalue(self):
+        """Franca 0.9.2, section 5.2.1"""
+
+        with self.assertRaises(ParserException) as context:
+            self._parse("""
+            package P
+            typeCollection TC {
+                const UInt32 MAX_COUNT = 0xABCDEFUInt32
+            }
+        """)
+        self.assertEqual(str(context.exception),
+                         "Syntax error at line 4 near 'UInt32'.")

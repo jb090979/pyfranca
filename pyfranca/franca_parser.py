@@ -7,6 +7,7 @@ from abc import ABCMeta
 import ply.yacc as yacc
 from pyfranca import franca_lexer
 from pyfranca import ast
+import re
 
 
 class ArgumentGroup(object):
@@ -61,16 +62,69 @@ class Parser(object):
                     raise ParserException("Unexpected package member type.")
         return imports, interfaces, typecollections
 
+    @staticmethod
+    def parse_structured_comment(comment):
+        """
+        Parse a structured comment.
+
+        :param comment: Structured comment of an Franca-IDL symbol to parse.
+        :return: OrderedDict of all comments. Key is Franca-IDL keyword, e.g. @description, value conatins the text.
+        """
+        keys = ['@description', '@author', '@deprecated', '@source_uri', '@source_alias', '@see', '@experimental']
+
+        strings = re.split('(' + '|'.join(keys) + ')', comment)
+
+        # remove optional spaces, ':' and finally empty strings
+        strings = [item.strip() for item in strings]
+        strings = [item.lstrip(':') for item in strings]
+        strings = [item.strip() for item in strings]
+        for item in strings:
+            if item == "":
+                strings.remove(item)
+
+        comments = OrderedDict()
+        length = len(strings)
+        i = 0
+        while i < length:
+            key = strings[i]
+            if key in keys:
+                comments[key] = ""
+
+                if i < (length - 1):
+                    item = strings[i + 1]
+                    if item not in keys:
+                        comments[key] = item
+                        i += 1
+            i += 1
+        return comments
+
     # noinspection PyIncorrectDocstring
     @staticmethod
     def p_package_def(p):
         """
-        package_def : PACKAGE fqn defs
+        package_def : structured_comment PACKAGE fqn defs
         """
-        imports, interfaces, typecollections = Parser._package_def(p[3])
-        p[0] = ast.Package(name=p[2], file_name=None, imports=imports,
+        imports, interfaces, typecollections = Parser._package_def(p[4])
+        p[0] = ast.Package(name=p[3], file_name=None, imports=imports,
                            interfaces=interfaces,
-                           typecollections=typecollections)
+                           typecollections=typecollections,
+                           comments=p[1])
+
+    # noinspection PyIncorrectDocstring
+    @staticmethod
+    def p_structured_comment_1(p):
+        """
+        structured_comment : STRUCTURED_COMMENT
+        """
+        p[0] = Parser.parse_structured_comment(p[1])
+
+    # noinspection PyIncorrectDocstring
+    @staticmethod
+    def p_structured_comment_2(p):
+        """
+        structured_comment : empty
+        """
+        p[0] = None
 
     # noinspection PyIncorrectDocstring
     @staticmethod
@@ -124,7 +178,7 @@ class Parser(object):
     @staticmethod
     def p_import_def_1(p):
         """
-        def : IMPORT fqn FROM FILE_NAME
+        def : IMPORT fqn FROM STRING_VAL
         """
         p[0] = ast.Import(file_name=p[4], namespace=p[2])
 
@@ -132,7 +186,7 @@ class Parser(object):
     @staticmethod
     def p_import_def_2(p):
         """
-        def : IMPORT MODEL FILE_NAME
+        def : IMPORT MODEL STRING_VAL
         """
         p[0] = ast.Import(file_name=p[3])
 
@@ -140,10 +194,10 @@ class Parser(object):
     @staticmethod
     def p_typecollection(p):
         """
-        def : TYPECOLLECTION ID '{' typecollection_members '}'
+        def : structured_comment TYPECOLLECTION ID '{' typecollection_members '}'
         """
         try:
-            p[0] = ast.TypeCollection(name=p[2], flags=None, members=p[4])
+            p[0] = ast.TypeCollection(name=p[3], flags=None, members=p[5], comments=p[1])
         except ast.ASTException as e:
             raise ParserException(e.message)
 
@@ -180,8 +234,10 @@ class Parser(object):
                               | type_def
                               | enumeration_def
                               | struct_def
+                              | union_def
                               | array_def
                               | map_def
+                              | constant_def
         """
         p[0] = p[1]
 
@@ -189,7 +245,7 @@ class Parser(object):
     @staticmethod
     def p_version_def(p):
         """
-        version_def : VERSION '{' MAJOR INTEGER MINOR INTEGER '}'
+        version_def : VERSION '{' MAJOR INTEGER_VAL MINOR INTEGER_VAL '}'
         """
         p[0] = ast.Version(major=p[4], minor=p[6])
 
@@ -197,19 +253,19 @@ class Parser(object):
     @staticmethod
     def p_type_def(p):
         """
-        type_def : TYPEDEF ID IS type
+        type_def : structured_comment TYPEDEF ID IS type
         """
-        p[0] = ast.Typedef(name=p[2], base_type=p[4])
+        p[0] = ast.Typedef(name=p[3], base_type=p[5], comments=p[1])
 
     # noinspection PyIncorrectDocstring
     @staticmethod
     def p_interface_1(p):
         """
-        def : INTERFACE ID '{' interface_members '}'
+        def : structured_comment INTERFACE ID '{' interface_members '}'
         """
         try:
-            p[0] = ast.Interface(name=p[2], flags=None, members=p[4],
-                                 extends=None)
+            p[0] = ast.Interface(name=p[3], flags=None, members=p[5],
+                                 extends=None, comments=p[1])
         except ast.ASTException as e:
             raise ParserException(e.message)
 
@@ -217,11 +273,11 @@ class Parser(object):
     @staticmethod
     def p_interface_2(p):
         """
-        def : INTERFACE ID EXTENDS fqn '{' interface_members '}'
+        def : structured_comment INTERFACE ID EXTENDS fqn '{' interface_members '}'
         """
         try:
-            p[0] = ast.Interface(name=p[2], flags=None, members=p[6],
-                                 extends=p[4])
+            p[0] = ast.Interface(name=p[3], flags=None, members=p[7],
+                                 extends=p[5], comments=p[1])
         except ast.ASTException as e:
             raise ParserException(e.message)
 
@@ -261,8 +317,10 @@ class Parser(object):
                          | type_def
                          | enumeration_def
                          | struct_def
+                         | union_def
                          | array_def
                          | map_def
+                         | constant_def
         """
         p[0] = p[1]
 
@@ -270,9 +328,9 @@ class Parser(object):
     @staticmethod
     def p_attribute_def(p):
         """
-        attribute_def : ATTRIBUTE type ID flag_defs
+        attribute_def : structured_comment ATTRIBUTE type ID flag_defs
         """
-        p[0] = ast.Attribute(name=p[3], attr_type=p[2], flags=p[4])
+        p[0] = ast.Attribute(name=p[4], attr_type=p[3], flags=p[5], comments=p[1])
 
     @staticmethod
     def _method_def(arg_groups):
@@ -308,11 +366,11 @@ class Parser(object):
     @staticmethod
     def p_method_def(p):
         """
-        method_def : METHOD ID flag_defs '{' arg_group_defs '}'
+        method_def : structured_comment METHOD ID flag_defs '{' arg_group_defs '}'
         """
-        in_args, out_args, errors = Parser._method_def(p[5])
-        p[0] = ast.Method(name=p[2], flags=p[3],
-                          in_args=in_args, out_args=out_args, errors=errors)
+        in_args, out_args, errors = Parser._method_def(p[6])
+        p[0] = ast.Method(name=p[3], flags=p[4],
+                          in_args=in_args, out_args=out_args, errors=errors, comments=p[1])
 
     # noinspection PyIncorrectDocstring
     @staticmethod
@@ -412,13 +470,13 @@ class Parser(object):
     @staticmethod
     def p_broadcast_def(p):
         """
-        broadcast_def : BROADCAST ID flag_defs '{' arg_group_defs '}'
+        broadcast_def : structured_comment BROADCAST ID flag_defs '{' arg_group_defs '}'
         """
-        in_args, out_args, errors = Parser._method_def(p[5])
+        in_args, out_args, errors = Parser._method_def(p[6])
         if in_args or errors:
             raise ParserException("In arguments and errors cannot be part "
                                   "of a broadcast definition.")
-        p[0] = ast.Broadcast(name=p[2], flags=p[3], out_args=out_args)
+        p[0] = ast.Broadcast(name=p[3], flags=p[4], out_args=out_args, comments=p[1])
 
     # noinspection PyIncorrectDocstring
     @staticmethod
@@ -445,25 +503,25 @@ class Parser(object):
     @staticmethod
     def p_arg_def(p):
         """
-        arg_def : type ID
+        arg_def : structured_comment type ID
         """
-        p[0] = ast.Argument(name=p[2], arg_type=p[1])
+        p[0] = ast.Argument(name=p[3], arg_type=p[2], comments=p[1])
 
     # noinspection PyIncorrectDocstring
     @staticmethod
     def p_enumeration_def_1(p):
         """
-        enumeration_def : ENUMERATION ID '{' enumerators '}'
+        enumeration_def : structured_comment ENUMERATION ID '{' enumerators '}'
         """
-        p[0] = ast.Enumeration(name=p[2], enumerators=p[4])
+        p[0] = ast.Enumeration(name=p[3], enumerators=p[5], comments=p[1])
 
     # noinspection PyIncorrectDocstring
     @staticmethod
     def p_enumeration_def_2(p):
         """
-        enumeration_def : ENUMERATION ID EXTENDS fqn '{' enumerators '}'
+        enumeration_def : structured_comment ENUMERATION ID EXTENDS fqn '{' enumerators '}'
         """
-        p[0] = ast.Enumeration(name=p[2], enumerators=p[6], extends=p[4])
+        p[0] = ast.Enumeration(name=p[3], enumerators=p[7], extends=p[5], comments=p[1])
 
     # noinspection PyIncorrectDocstring
     @staticmethod
@@ -499,33 +557,33 @@ class Parser(object):
     @staticmethod
     def p_enumerator_1(p):
         """
-        enumerator : ID
+        enumerator : structured_comment ID
         """
-        p[0] = ast.Enumerator(name=p[1])
+        p[0] = ast.Enumerator(name=p[2], comments=p[1])
 
     # noinspection PyIncorrectDocstring
     @staticmethod
     def p_enumerator_2(p):
         """
-        enumerator : ID '=' INTEGER
+        enumerator : structured_comment ID '=' integer_val
         """
-        p[0] = ast.Enumerator(name=p[1], value=p[3])
+        p[0] = ast.Enumerator(name=p[2], value=p[4], comments=p[1])
 
     # noinspection PyIncorrectDocstring
     @staticmethod
     def p_struct_def_1(p):
         """
-        struct_def : STRUCT ID flag_defs '{' struct_fields '}'
+        struct_def : structured_comment STRUCT ID flag_defs '{' struct_fields '}'
         """
-        p[0] = ast.Struct(name=p[2], fields=p[5], flags=p[3])
+        p[0] = ast.Struct(name=p[3], fields=p[6], flags=p[4], comments=p[1])
 
     # noinspection PyIncorrectDocstring
     @staticmethod
     def p_struct_def_2(p):
         """
-        struct_def : STRUCT ID EXTENDS fqn '{' struct_fields '}'
+        struct_def : structured_comment STRUCT ID EXTENDS fqn '{' struct_fields '}'
         """
-        p[0] = ast.Struct(name=p[2], fields=p[6], extends=p[4])
+        p[0] = ast.Struct(name=p[3], fields=p[7], extends=p[5], comments=p[1])
 
     # noinspection PyIncorrectDocstring
     @staticmethod
@@ -559,27 +617,231 @@ class Parser(object):
 
     # noinspection PyIncorrectDocstring
     @staticmethod
-    def p_struct_field_1(p):
+    def p_struct_field(p):
         """
-        struct_field : type ID
+        struct_field : structured_comment type ID
         """
-        p[0] = ast.StructField(name=p[2], field_type=p[1])
+        p[0] = ast.StructField(name=p[3], field_type=p[2], comments=p[1])
+
+    # noinspection PyIncorrectDocstring
+    @staticmethod
+    def p_union_def_1(p):
+        """
+        union_def : structured_comment UNION ID '{' union_fields '}'
+        """
+        p[0] = ast.Union(name=p[3], fields=p[5], comments=p[1])
+
+    # noinspection PyIncorrectDocstring
+    @staticmethod
+    def p_union_def_2(p):
+        """
+        union_def : structured_comment UNION ID EXTENDS fqn '{' union_fields '}'
+        """
+        p[0] = ast.Union(name=p[3], fields=p[7], extends=p[5], comments=p[1])
+
+    # noinspection PyIncorrectDocstring
+    @staticmethod
+    def p_union_fields_1(p):
+        """
+        union_fields : union_fields union_field
+        """
+        p[0] = p[1]
+        if p[2].name not in p[0]:
+            p[0][p[2].name] = p[2]
+        else:
+            raise ParserException(
+                "Duplicate union field '{}'.".format(p[2].name))
+
+    # noinspection PyIncorrectDocstring
+    @staticmethod
+    def p_union_fields_2(p):
+        """
+        union_fields : union_field
+        """
+        p[0] = OrderedDict()
+        p[0][p[1].name] = p[1]
+
+    # noinspection PyUnusedLocal, PyIncorrectDocstring
+    @staticmethod
+    def p_union_fields_3(p):
+        """
+        union_fields : empty
+        """
+        pass
+
+    # noinspection PyIncorrectDocstring
+    @staticmethod
+    def p_union_field(p):
+        """
+        union_field : structured_comment type ID
+        """
+        p[0] = ast.UnionField(name=p[3], field_type=p[2], comments=p[1])
 
     # noinspection PyIncorrectDocstring
     @staticmethod
     def p_array_def(p):
         """
-        array_def : ARRAY ID OF type
+        array_def : structured_comment ARRAY ID OF type
         """
-        p[0] = ast.Array(name=p[2], element_type=p[4])
+        p[0] = ast.Array(name=p[3], element_type=p[5], comments=p[1])
 
     # noinspection PyIncorrectDocstring
     @staticmethod
     def p_map_def(p):
         """
-        map_def : MAP ID '{' type TO type '}'
+        map_def : structured_comment MAP ID '{' type TO type '}'
         """
-        p[0] = ast.Map(name=p[2], key_type=p[4], value_type=p[6])
+        p[0] = ast.Map(name=p[3], key_type=p[5], value_type=p[7], comments=p[1])
+
+    # noinspection PyIncorrectDocstring
+    @staticmethod
+    def p_constant_def_1(p):
+        """
+        constant_def : structured_comment CONST INT8 ID '=' integer_val
+                     | structured_comment CONST INT16 ID '=' integer_val
+                     | structured_comment CONST INT32 ID '=' integer_val
+                     | structured_comment CONST INT64 ID '=' integer_val
+                     | structured_comment CONST UINT8 ID '=' integer_val
+                     | structured_comment CONST UINT16 ID '=' integer_val
+                     | structured_comment CONST UINT32 ID '=' integer_val
+                     | structured_comment CONST UINT64 ID '=' integer_val
+        """
+        type_class = getattr(ast, p[3])
+        value = ast.IntegerValue(p[6].value, p[6].base)
+        p[0] = ast.Constant(name=p[4], element_type=type_class(), element_value=value, comments=p[1])
+
+    # noinspection PyIncorrectDocstring
+    @staticmethod
+    def p_constant_def_2(p):
+        """
+        constant_def : structured_comment CONST INT8 ID '=' boolean_val
+                     | structured_comment CONST INT16 ID '=' boolean_val
+                     | structured_comment CONST INT32 ID '=' boolean_val
+                     | structured_comment CONST INT64 ID '=' boolean_val
+                     | structured_comment CONST UINT8 ID '=' boolean_val
+                     | structured_comment CONST UINT16 ID '=' boolean_val
+                     | structured_comment CONST UINT32 ID '=' boolean_val
+                     | structured_comment CONST UINT64 ID '=' boolean_val
+                     | structured_comment CONST INT8 ID '=' real_val
+                     | structured_comment CONST INT16 ID '=' real_val
+                     | structured_comment CONST INT32 ID '=' real_val
+                     | structured_comment CONST INT64 ID '=' real_val
+                     | structured_comment CONST UINT8 ID '=' real_val
+                     | structured_comment CONST UINT16 ID '=' real_val
+                     | structured_comment CONST UINT32 ID '=' real_val
+                     | structured_comment CONST UINT64 ID '=' real_val
+        """
+        type_class = getattr(ast, p[3])
+        value = ast.IntegerValue(int(p[6].value))
+        p[0] = ast.Constant(name=p[4], element_type=type_class(), element_value=value, comments=p[1])
+
+    # noinspection PyIncorrectDocstring
+    @staticmethod
+    def p_constant_def_3(p):
+        """
+        constant_def : structured_comment CONST FLOAT ID '=' integer_val
+                     | structured_comment CONST FLOAT ID '=' boolean_val
+                     | structured_comment CONST FLOAT ID '=' real_val
+        """
+        type_class = getattr(ast, p[3])
+        value = ast.FloatValue(float(p[6].value))
+        p[0] = ast.Constant(name=p[4], element_type=type_class(), element_value=value, comments=p[1])
+
+    # noinspection PyIncorrectDocstring
+    @staticmethod
+    def p_constant_def_4(p):
+        """
+        constant_def : structured_comment CONST DOUBLE ID '=' integer_val
+                     | structured_comment CONST DOUBLE ID '=' boolean_val
+                     | structured_comment CONST DOUBLE ID '=' real_val
+        """
+        type_class = getattr(ast, p[3])
+        value = ast.DoubleValue(float(p[6].value))
+        p[0] = ast.Constant(name=p[4], element_type=type_class(), element_value=value, comments=p[1])
+
+    # noinspection PyIncorrectDocstring
+    @staticmethod
+    def p_constant_def_5(p):
+        """
+        constant_def : structured_comment CONST BOOLEAN ID '=' value
+        """
+        type_class = getattr(ast, p[3])
+        value = ast.BooleanValue(bool(p[6].value))
+        p[0] = ast.Constant(name=p[4], element_type=type_class(), element_value=value, comments=p[1])
+
+    # noinspection PyIncorrectDocstring
+    @staticmethod
+    def p_constant_def_6(p):
+        """
+        constant_def : structured_comment CONST STRING ID '=' value
+        """
+        type_class = getattr(ast, p[3])
+        value = ast.StringValue(str(p[6].value))
+        p[0] = ast.Constant(name=p[4], element_type=type_class(), element_value=value, comments=p[1])
+
+    # noinspection PyIncorrectDocstring
+    @staticmethod
+    def p_boolean_val(p):
+        """
+        boolean_val : BOOLEAN_VAL
+        """
+        p[0] = ast.BooleanValue(p[1])
+
+    # noinspection PyIncorrectDocstring
+    @staticmethod
+    def p_integer_val(p):
+        """
+        integer_val : INTEGER_VAL
+        """
+        p[0] = ast.IntegerValue(p[1])
+
+    # noinspection PyIncorrectDocstring
+    @staticmethod
+    def p_integer_val_2(p):
+        """
+        integer_val : HEXADECIMAL_VAL
+        """
+        p[0] = ast.IntegerValue(p[1], ast.IntegerValue.HEXADECIMAL)
+
+    # noinspection PyIncorrectDocstring
+    @staticmethod
+    def p_integer_val_3(p):
+        """
+        integer_val : BINARY_VAL
+        """
+        p[0] = ast.IntegerValue(p[1], ast.IntegerValue.BINARY)
+
+    # noinspection PyIncorrectDocstring
+    @staticmethod
+    def p_real_val(p):
+        """
+        real_val : REAL_VAL
+        """
+        if re.match(r".*[dD]", p[1]):
+            p[0] = ast.DoubleValue(float(p[1][:-1]))
+        elif re.match(r".*[fF]", p[1]):
+            p[0] = ast.FloatValue(float(p[1][:-1]))
+        else:
+            p[0] = ast.DoubleValue(float(p[1]))
+
+    # noinspection PyIncorrectDocstring
+    @staticmethod
+    def p_string_val(p):
+        """
+        string_val : STRING_VAL
+        """
+        p[0] = ast.StringValue(p[1])
+
+    # noinspection PyIncorrectDocstring
+    @staticmethod
+    def p_value(p):
+        """
+        value : boolean_val
+              | string_val
+              | real_val
+              | integer_val
+        """
+        p[0] = p[1]
 
     # noinspection PyIncorrectDocstring
     @staticmethod

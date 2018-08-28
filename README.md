@@ -1,6 +1,7 @@
 PyFranca
 ========
 
+[![Documentation Status](https://readthedocs.org/projects/pyfranca/badge/?version=latest)](http://pyfranca.readthedocs.io/en/latest/?badge=latest)
 [![Build Status](https://travis-ci.org/zayfod/pyfranca.svg?branch=master)](https://travis-ci.org/zayfod/pyfranca)
 [![Coverage Status](https://coveralls.io/repos/github/zayfod/pyfranca/badge.svg?branch=master)](https://coveralls.io/github/zayfod/pyfranca?branch=master)
 [![Scrutinizer Code Quality](https://scrutinizer-ci.com/g/zayfod/pyfranca/badges/quality-score.png?b=master)](https://scrutinizer-ci.com/g/zayfod/pyfranca/?branch=master)
@@ -88,14 +89,13 @@ Limitations
 
 The following Franca features are not supported:
 
-- structured comments
 - dots in type collection and interface names
-- constants
+- complex constants
 - expressions
-- unions
 - method overloading
 - method error extending
 - contracts
+- deployment models
 
 
 Requirements
@@ -122,9 +122,9 @@ From source:
 Documentation
 -------------
 
-API documentation is available on PythonHosted.org:
+API documentation is available here:
 
-http://pythonhosted.org/pyfranca/
+http://pyfranca.readthedocs.io/
 
 
 Bugs

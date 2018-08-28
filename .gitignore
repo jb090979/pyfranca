@@ -1,5 +1,6 @@
 
 .idea/
+.DS_Store
 
 *.pyc
 
@@ -13,3 +14,5 @@
 /*.egg-info/
 
 .coverage
+
+/pyfranca/tests/franca

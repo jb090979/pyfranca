@@ -3,6 +3,9 @@ Pyfranca processor tests.
 """
 
 import unittest
+import os
+import errno
+import shutil
 
 from pyfranca import ProcessorException, Processor, ast
 
@@ -10,10 +13,49 @@ from pyfranca import ProcessorException, Processor, ast
 class BaseTestCase(unittest.TestCase):
 
     def setUp(self):
+        # Create temporary file directory.
+        tmp_dir = self.get_spec()
+        try:
+            os.makedirs(tmp_dir)
+        except OSError as e:
+            if e.errno != errno.EEXIST:
+                raise
+            # Delete and try again
+            shutil.rmtree(tmp_dir)
+            os.makedirs(tmp_dir)
+        # Create FIDL processor.
         self.processor = Processor()
+        self.processor.package_paths.append(tmp_dir)
 
     def tearDown(self):
         self.processor = None
+        # Remove temporary file directory.
+        tmp_dir = self.get_spec()
+        shutil.rmtree(tmp_dir)
+
+    @staticmethod
+    def get_spec(basedir="tmp", filename=None):
+        """
+        Get absolute specification a directory or a file under pyfranca/tests/fidl/ .
+        :param basedir: Target subdirectory.
+        :param filename: File name or None to get a directory specification
+        :return: Absolute specification.
+        """
+        script_dir = os.path.dirname(os.path.realpath(__file__))
+        spec = os.path.join(script_dir, "fidl", basedir)
+        if filename:
+            spec = os.path.join(spec, filename)
+        return spec
+
+    def tmp_fidl(self, filename, content):
+        fspec = self.get_spec(filename=filename)
+        with open(fspec, "w") as f:
+            f.write(content)
+        return fspec
+
+    def import_tmp_fidl(self, filename, content):
+        fspec = self.tmp_fidl(filename, content)
+        self.processor.import_file(fspec)
 
 
 class TestFQNs(BaseTestCase):
@@ -44,20 +86,21 @@ class TestImports(BaseTestCase):
     """Test import related features."""
 
     def test_basic(self):
-        self.processor.import_string("test.fidl", """
+        fspec = self.tmp_fidl("test.fidl", """
             package P
         """)
-        self.processor.import_string("test2.fidl", """
+        fspec2 = self.tmp_fidl("test2.fidl", """
             package P2
         """)
+        self.processor.import_file(fspec)
+        self.processor.import_file(fspec2)
+
         # Verify file access
         self.assertEqual(len(self.processor.files), 2)
-        p = self.processor.files["test.fidl"]
+        p = self.processor.files[fspec]
         self.assertEqual(p.name, "P")
-        self.assertEqual(p.files, ["test.fidl"])
-        p2 = self.processor.files["test2.fidl"]
+        p2 = self.processor.files[fspec2]
         self.assertEqual(p2.name, "P2")
-        self.assertEqual(p2.files, ["test2.fidl"])
         # Verify package access
         self.assertEqual(len(self.processor.packages), 2)
         p = self.processor.packages["P"]
@@ -67,77 +110,87 @@ class TestImports(BaseTestCase):
 
     def test_import_nonexistent_model(self):
         with self.assertRaises(ProcessorException) as context:
-            self.processor.import_string("test.fidl", """
+            fspec = self.tmp_fidl("test.fidl", """
                 package P
                 import model "nosuch.fidl"
             """)
+            self.processor.import_file(fspec)
+
         self.assertEqual(str(context.exception),
                          "Model 'nosuch.fidl' not found.")
 
     def test_import_nonexistent_model2(self):
         with self.assertRaises(ProcessorException) as context:
-            self.processor.import_string("test.fidl", """
+            fspec = self.tmp_fidl("test.fidl", """
                 package P
                 import P.Nonexistent.* from "nosuch.fidl"
             """)
+            self.processor.import_file(fspec)
         self.assertEqual(str(context.exception),
                          "Model 'nosuch.fidl' not found.")
 
     def test_import_nonexistent_namespace(self):
         with self.assertRaises(ProcessorException) as context:
-            self.processor.import_string("test.fidl", """
+            self.tmp_fidl("test.fidl", """
                 package P
             """)
-            self.processor.import_string("test2.fidl", """
+            fspec = self.tmp_fidl("test2.fidl", """
                 package P2
                 import P.Nonexistent.* from "test.fidl"
             """)
+            self.processor.import_file(fspec)
+            print("Hello")
+
         self.assertEqual(str(context.exception),
                          "Namespace 'P.Nonexistent.*' not found.")
 
-    # TODO: Temporary file creation needed.
-    # def test_circular_dependency(self):
-    #     self.processor.import_string("test.fidl", """
-    #         package P
-    #
-    #         import P2
-    #     """)
-    #     self.processor.import_string("test2.fidl", """
-    #         package P2
-    #
-    #         import P
-    #     """)
+    def test_circular_dependency(self):
+        fspec = self.tmp_fidl("test.fidl", """
+            package P
+            import model "test2.fidl"
+        """)
+        self.tmp_fidl("test2.fidl", """
+            package P2
+            import model "test.fidl"
+        """)
+        self.processor.import_file(fspec)
+        # FIXME: What is the correct behavior?
 
 
 class TestPackagesInMultipleFiles(BaseTestCase):
     """Support for packages in multiple files"""
 
     def test_package_in_multiple_files(self):
-        self.processor.import_string("test.fidl", """
+        fspec = self.tmp_fidl("test.fidl", """
             package P
         """)
-        self.processor.import_string("test2.fidl", """
+        fspec2 = self.tmp_fidl("test2.fidl", """
             package P
         """)
+        self.processor.import_file(fspec)
+        self.processor.import_file(fspec2)
         p = self.processor.packages["P"]
-        self.assertEqual(p.files, ["test.fidl", "test2.fidl"])
+        self.assertEqual(p.files, [fspec, fspec2])
 
     def test_package_in_multiple_files_reuse(self):
-        self.processor.import_string("test.fidl", """
+        fspec = self.tmp_fidl("test.fidl", """
             package P
             typeCollection TC {
                 typedef A is Int32
             }
         """)
-        self.processor.import_string("test2.fidl", """
+        fspec2 = self.tmp_fidl("test2.fidl", """
             package P
             import P.TC.* from "test.fidl"
             interface I {
                 typedef B is A
             }
         """)
+        self.processor.import_file(fspec)
+        self.processor.import_file(fspec2)
+
         p = self.processor.packages["P"]
-        self.assertEqual(p.files, ["test.fidl", "test2.fidl"])
+        self.assertEqual(p.files, [fspec, fspec2])
         a = p.typecollections["TC"].typedefs["A"]
         self.assertEqual(a.namespace.package, p)
         self.assertTrue(isinstance(a.type, ast.Int32))
@@ -152,13 +205,15 @@ class TestReferences(BaseTestCase):
     """Test type references."""
 
     def test_reference_to_same_namespace(self):
-        self.processor.import_string("test.fidl", """
+        fspec = self.tmp_fidl("test.fidl", """
             package P
             typeCollection TC {
                 typedef A is Int32
                 typedef B is A
             }
         """)
+        self.processor.import_file(fspec)
+
         a = self.processor.packages["P"].typecollections["TC"].typedefs["A"]
         self.assertTrue(isinstance(a.type, ast.Int32))
         b = self.processor.packages["P"].typecollections["TC"].typedefs["B"]
@@ -167,22 +222,24 @@ class TestReferences(BaseTestCase):
         self.assertEqual(b.type.reference, a)
 
     def test_fqn_reference(self):
-        self.processor.import_string("test.fidl", """
+        fspec = self.tmp_fidl("test.fidl", """
             package P
             typeCollection TC {
                 typedef A is Int32
                 typedef B is P.TC.A
             }
         """)
+        self.processor.import_file(fspec)
+
         a = self.processor.packages["P"].typecollections["TC"].typedefs["A"]
         self.assertTrue(isinstance(a.type, ast.Int32))
         b = self.processor.packages["P"].typecollections["TC"].typedefs["B"]
         self.assertTrue(isinstance(b.type, ast.Reference))
-        self.assertEqual(b.type.name, "P.TC.A")
+        self.assertEqual(b.type.name, "A")
         self.assertEqual(b.type.reference, a)
 
     def test_reference_to_different_namespace(self):
-        self.processor.import_string("test.fidl", """
+        fspec = self.tmp_fidl("test.fidl", """
             package P
             typeCollection TC {
                 typedef A is Int32
@@ -191,6 +248,8 @@ class TestReferences(BaseTestCase):
                 typedef B is A
             }
         """)
+        self.processor.import_file(fspec)
+
         a = self.processor.packages["P"].typecollections["TC"].typedefs["A"]
         self.assertTrue(isinstance(a.type, ast.Int32))
         b = self.processor.packages["P"].interfaces["I"].typedefs["B"]
@@ -199,19 +258,21 @@ class TestReferences(BaseTestCase):
         self.assertEqual(b.type.reference, a)
 
     def test_reference_to_different_model(self):
-        self.processor.import_string("test.fidl", """
+        self.tmp_fidl("test.fidl", """
             package P
             typeCollection TC {
                 typedef A is Int32
             }
         """)
-        self.processor.import_string("test2.fidl", """
+        fspec = self.tmp_fidl("test2.fidl", """
             package P2
             import P.TC.* from "test.fidl"
             interface I {
                 typedef B is A
             }
         """)
+        self.processor.import_file(fspec)
+
         a = self.processor.packages["P"].typecollections["TC"].typedefs["A"]
         self.assertTrue(isinstance(a.type, ast.Int32))
         b = self.processor.packages["P2"].interfaces["I"].typedefs["B"]
@@ -222,34 +283,38 @@ class TestReferences(BaseTestCase):
     @unittest.skip("Currently not checked.")
     def test_circular_reference(self):
         with self.assertRaises(ProcessorException) as context:
-            self.processor.import_string("test.fidl", """
+            fspec = self.tmp_fidl("test.fidl", """
                 package P
                 typeCollection TC {
                     typedef A is B
                     typedef B is A
                 }
             """)
+            self.processor.import_file(fspec)
+
         self.assertEqual(str(context.exception),
                          "Circular reference 'B'.")
 
     def test_reference_priority(self):
-        self.processor.import_string("test.fidl", """
+        self.tmp_fidl("test.fidl", """
             package P
             typeCollection TC {
                 typedef A is Int32
             }
         """)
-        self.processor.import_string("test2.fidl", """
+        fspec = self.tmp_fidl("test2.fidl", """
             package P2
             import P.TC.* from "test.fidl"
             typeCollection TC {
                 typedef A is UInt32
             }
             interface I {
-                typedef B is A
+                typedef B is P2.TC.A
                 typedef B2 is P.TC.A
             }
         """)
+        self.processor.import_file(fspec)
+
         a = self.processor.packages["P"].typecollections["TC"].typedefs["A"]
         self.assertTrue(isinstance(a.type, ast.Int32))
         a2 = self.processor.packages["P2"].typecollections["TC"].typedefs["A"]
@@ -260,26 +325,28 @@ class TestReferences(BaseTestCase):
         self.assertEqual(b.type.reference, a2)
         b2 = self.processor.packages["P2"].interfaces["I"].typedefs["B2"]
         self.assertTrue(isinstance(b2.type, ast.Reference))
-        self.assertEqual(b2.type.name, "P.TC.A")
+        self.assertEqual(b2.type.name, "A")
         self.assertEqual(b2.type.reference, a)
 
     def test_interface_visibility(self):
-        self.processor.import_string("test.fidl", """
+        self.tmp_fidl("test.fidl", """
             package P
             typeCollection TC {
                 typedef A is Int32
             }
         """)
-        self.processor.import_string("test2.fidl", """
+        fspec = self.tmp_fidl("test2.fidl", """
             package P2
             import P.TC.* from "test.fidl"
             interface I {
                 typedef A is UInt32
             }
             typeCollection TC {
-                typedef B is A
+                typedef B is TC.A
             }
         """)
+        self.processor.import_file(fspec)
+
         a = self.processor.packages["P"].typecollections["TC"].typedefs["A"]
         self.assertTrue(isinstance(a.type, ast.Int32))
         a2 = self.processor.packages["P2"].interfaces["I"].typedefs["A"]
@@ -291,18 +358,20 @@ class TestReferences(BaseTestCase):
 
     def test_unresolved_reference_in_typedef(self):
         with self.assertRaises(ProcessorException) as context:
-            self.processor.import_string("test.fidl", """
+            fspec = self.tmp_fidl("test.fidl", """
                 package P
                 typeCollection TC {
                     typedef TD is Unknown
                 }
             """)
+            self.processor.import_file(fspec)
+
         self.assertEqual(str(context.exception),
                          "Unresolved reference 'Unknown'.")
 
     def test_unresolved_reference_in_struct(self):
         with self.assertRaises(ProcessorException) as context:
-            self.processor.import_string("test.fidl", """
+            fspec = self.tmp_fidl("test.fidl", """
                 package P
                 typeCollection TC {
                     struct S {
@@ -310,178 +379,243 @@ class TestReferences(BaseTestCase):
                     }
                 }
             """)
+            self.processor.import_file(fspec)
+
         self.assertEqual(str(context.exception),
                          "Unresolved reference 'Unknown'.")
 
     def test_unresolved_reference_in_array(self):
         with self.assertRaises(ProcessorException) as context:
-            self.processor.import_string("test.fidl", """
+            fspec = self.tmp_fidl("test.fidl", """
                 package P
                 typeCollection TC {
                     array A of Unknown
                 }
             """)
+            self.processor.import_file(fspec)
+
         self.assertEqual(str(context.exception),
                          "Unresolved reference 'Unknown'.")
 
     def test_unresolved_reference_in_map(self):
         with self.assertRaises(ProcessorException) as context:
-            self.processor.import_string("test.fidl", """
+            fspec = self.tmp_fidl("test.fidl", """
                 package P
                 typeCollection TC {
                     map M { Unknown to Int32 }
                 }
             """)
+            self.processor.import_file(fspec)
+
         self.assertEqual(str(context.exception),
                          "Unresolved reference 'Unknown'.")
 
     def test_unresolved_reference_in_map2(self):
         with self.assertRaises(ProcessorException) as context:
-            self.processor.import_string("test.fidl", """
+            fspec = self.tmp_fidl("test.fidl", """
                 package P
                 typeCollection TC {
                     map M { Int32 to Unknown }
                 }
             """)
+            self.processor.import_file(fspec)
+
         self.assertEqual(str(context.exception),
                          "Unresolved reference 'Unknown'.")
 
     def test_unresolved_reference_in_attribute(self):
         with self.assertRaises(ProcessorException) as context:
-            self.processor.import_string("test.fidl", """
+            fspec = self.tmp_fidl("test.fidl", """
                 package P
                 interface I {
                     attribute Unknown A
                 }
             """)
+            self.processor.import_file(fspec)
+
         self.assertEqual(str(context.exception),
                          "Unresolved reference 'Unknown'.")
 
     def test_unresolved_reference_in_method(self):
         with self.assertRaises(ProcessorException) as context:
-            self.processor.import_string("test.fidl", """
+            fspec = self.tmp_fidl("test.fidl", """
                 package P
                 interface I {
                     method M { in { Unknown a } }
                 }
             """)
+            self.processor.import_file(fspec)
+
         self.assertEqual(str(context.exception),
                          "Unresolved reference 'Unknown'.")
 
     def test_unresolved_reference_in_method2(self):
         with self.assertRaises(ProcessorException) as context:
-            self.processor.import_string("test.fidl", """
+            fspec = self.tmp_fidl("test.fidl", """
                 package P
                 interface I {
                     method M { out { Unknown a } }
                 }
             """)
+            self.processor.import_file(fspec)
+
         self.assertEqual(str(context.exception),
                          "Unresolved reference 'Unknown'.")
 
     def test_unresolved_reference_in_method3(self):
         with self.assertRaises(ProcessorException) as context:
-            self.processor.import_string("test.fidl", """
+            fspec = self.tmp_fidl("test.fidl", """
                 package P
                 interface I {
                     method M { error Unknown }
                 }
             """)
+            self.processor.import_file(fspec)
+
         self.assertEqual(str(context.exception),
                          "Unresolved reference 'Unknown'.")
 
     def test_unresolved_reference_in_broadcast(self):
         with self.assertRaises(ProcessorException) as context:
-            self.processor.import_string("test.fidl", """
+            fspec = self.tmp_fidl("test.fidl", """
                 package P
                 interface I {
                     broadcast B { out { Unknown a } }
                 }
             """)
+            self.processor.import_file(fspec)
+
         self.assertEqual(str(context.exception),
                          "Unresolved reference 'Unknown'.")
 
     def test_method_error_reference(self):
-        self.processor.import_string("test.fidl", """
+        fspec = self.tmp_fidl("test.fidl", """
             package P
             interface I {
                 enumeration E { A B C }
                 method M { error E }
             }
         """)
+        self.processor.import_file(fspec)
+
         e = self.processor.packages["P"].interfaces["I"].enumerations["E"]
         m = self.processor.packages["P"].interfaces["I"].methods["M"]
         me = m.errors
         self.assertTrue(isinstance(me, ast.Reference))
         self.assertEqual(me.reference, e)
 
+    def test_method_nameless_error(self):
+        fspec = self.tmp_fidl("test.fidl", """
+            package P
+            interface I {
+                method M { error { A B C }  }
+            }
+        """)
+        self.processor.import_file(fspec)
+
+        m = self.processor.packages["P"].interfaces["I"].methods["M"]
+        me = m.errors
+        self.assertTrue(isinstance(me['A'], ast.Enumerator))
+        self.assertTrue(isinstance(me['B'], ast.Enumerator))
+        self.assertTrue(isinstance(me['C'], ast.Enumerator))
+
+        self.assertEqual(me['A'].name, "A")
+        self.assertEqual(me['B'].name, "B")
+        self.assertEqual(me['C'].name, "C")
+
     def test_invalid_method_error_reference(self):
         with self.assertRaises(ProcessorException) as context:
-            self.processor.import_string("test.fidl", """
+            fspec = self.tmp_fidl("test.fidl", """
                 package P
                 interface I {
                     typedef E is String
                     method M { error E }
                 }
             """)
+            self.processor.import_file(fspec)
+
         self.assertEqual(str(context.exception),
                          "Invalid error reference 'E'.")
 
     def test_enumeration_extension(self):
-        self.processor.import_string("test.fidl", """
+        fspec = self.tmp_fidl("test.fidl", """
             package P
             interface I {
                 enumeration E { A B C }
                 enumeration E2 extends E { D E F }
             }
         """)
+        self.processor.import_file(fspec)
+
         e = self.processor.packages["P"].interfaces["I"].enumerations["E"]
         e2 = self.processor.packages["P"].interfaces["I"].enumerations["E2"]
         self.assertEqual(e2.reference, e)
 
     def test_invalid_enumeration_extension(self):
         with self.assertRaises(ProcessorException) as context:
-            self.processor.import_string("test.fidl", """
+            fspec = self.tmp_fidl("test.fidl", """
                 package P
                 interface I {
                     typedef E is String
                     enumeration E2 extends E { D E F }
                 }
             """)
+            self.processor.import_file(fspec)
+
         self.assertEqual(str(context.exception),
                          "Invalid enumeration reference 'E'.")
 
+    def test_invalid_enumeration_extension2(self):
+        fspec = self.tmp_fidl("test.fidl", """
+            package P
+            interface I {
+                enumeration E { A B C }
+                enumeration E2 extends E { A E F }
+            }
+        """)
+        self.processor.import_file(fspec)
+
+        e = self.processor.packages["P"].interfaces["I"].enumerations["E"]
+        e2 = self.processor.packages["P"].interfaces["I"].enumerations["E2"]
+        self.assertEqual(e2.reference, e)
+
     def test_struct_extension(self):
-        self.processor.import_string("test.fidl", """
+        fspec = self.tmp_fidl("test.fidl", """
             package P
             interface I {
                 struct S { Int32 a }
                 struct S2 extends S { Int32 b }
             }
         """)
+        self.processor.import_file(fspec)
+
         s = self.processor.packages["P"].interfaces["I"].structs["S"]
         s2 = self.processor.packages["P"].interfaces["I"].structs["S2"]
         self.assertEqual(s2.reference, s)
 
     def test_invalid_struct_extension(self):
         with self.assertRaises(ProcessorException) as context:
-            self.processor.import_string("test.fidl", """
+            fspec = self.tmp_fidl("test.fidl", """
                 package P
                 interface I {
                     typedef S is String
                     struct S2 extends S { Int32 b }
                 }
             """)
+            self.processor.import_file(fspec)
+
         self.assertEqual(str(context.exception),
                          "Invalid struct reference 'S'.")
 
     def test_interface_extension(self):
-        self.processor.import_string("test.fidl", """
+        fspec = self.tmp_fidl("test.fidl", """
             package P
             interface I { }
             interface I2 extends I { }
             interface I3 extends P.I { }
         """)
+        self.processor.import_file(fspec)
+
         i = self.processor.packages["P"].interfaces["I"]
         i2 = self.processor.packages["P"].interfaces["I2"]
         self.assertEqual(i2.reference, i)
@@ -489,16 +623,18 @@ class TestReferences(BaseTestCase):
         self.assertEqual(i3.reference, i)
 
     def test_interface_extension2(self):
-        self.processor.import_string("test.fidl", """
+        self.tmp_fidl("test.fidl", """
             package P
             interface I { }
         """)
-        self.processor.import_string("test2.fidl", """
+        fspec = self.tmp_fidl("test2.fidl", """
             package P2
             import model "test.fidl"
             interface I2 extends I { }
             interface I3 extends P.I { }
         """)
+        self.processor.import_file(fspec)
+
         i = self.processor.packages["P"].interfaces["I"]
         i2 = self.processor.packages["P2"].interfaces["I2"]
         self.assertEqual(i2.reference, i)
@@ -507,16 +643,18 @@ class TestReferences(BaseTestCase):
 
     def test_invalid_interface_extension(self):
         with self.assertRaises(ProcessorException) as context:
-            self.processor.import_string("test.fidl", """
+            fspec = self.tmp_fidl("test.fidl", """
                 package P
                 typeCollection TC { typedef I is Int32 }
                 interface I2 extends I { }
             """)
+            self.processor.import_file(fspec)
+
         self.assertEqual(str(context.exception),
                          "Unresolved namespace reference 'I'.")
 
     def test_anonymous_array_references(self):
-        self.processor.import_string("test.fidl", """
+        fspec = self.tmp_fidl("test.fidl", """
             package P
             typeCollection TC {
                 typedef TD is Int32
@@ -531,6 +669,8 @@ class TestReferences(BaseTestCase):
                 broadcast B { out { TD[] tda } }
             }
         """)
+        self.processor.import_file(fspec)
+
         tc = self.processor.packages["P"].typecollections["TC"]
         td = tc.typedefs["TD"]
         tda = tc.typedefs["TDA"]
@@ -547,6 +687,250 @@ class TestReferences(BaseTestCase):
         self.assertEqual(a.type.type.reference, td)
         m = i.methods["M"]
         self.assertEqual(m.in_args["tda"].type.type.reference, td)
+        self.assertEqual(isinstance(m.in_args["tda"].type, ast.Array), True)
         self.assertEqual(m.out_args["tda"].type.type.reference, td)
         b = i.broadcasts["B"]
         self.assertEqual(b.out_args["tda"].type.type.reference, td)
+
+    def test_import_missing_files(self):
+        # P.fidl references definitions.fidl but it is not in the package path.
+        with self.assertRaises(ProcessorException) as context:
+            self.processor.import_file(
+                os.path.join(self.get_spec("idl"), "P.fidl"))
+            self.processor.import_file(
+                os.path.join(self.get_spec("idl2"), "P2.fidl"))
+        self.assertEqual(str(context.exception),
+                         "Model 'definitions.fidl' not found.")
+
+    def test_import_multiple_files(self):
+        fidl_dir = self.get_spec("idl")
+        self.processor.package_paths.append(fidl_dir)
+        self.processor.import_file(
+            os.path.join(fidl_dir, "P.fidl"))
+        self.processor.import_file(
+            os.path.join(self.get_spec("idl2"), "P2.fidl"))
+
+
+    def test_import_file_chain(self):
+        fspec = self.tmp_fidl("P.fidl", """
+            package P
+            import P.Type1.* from "Type1.fidl"
+            import P.Type2.* from "Type2.fidl"
+            interface I {
+                version { major 1 minor 0 }
+                method getData {
+                    out {
+                          MyStructType1 outVal
+                       }
+                    in {
+                          MyStructType2 inVal
+                       }
+                }
+            }
+        """)
+        self.tmp_fidl("Type1.fidl", """
+            package P
+            import P.Common.* from "common.fidl"
+            typeCollection Type1 {
+                version { major 1 minor 0 }
+                struct MyStructType1 {
+                    UInt8 val1
+                    MyEnum val2
+                    String  msg
+                }
+            }
+        """)
+        self.tmp_fidl("Type2.fidl", """
+            package P
+            import P.Common.* from "common.fidl"
+            typeCollection Type2 {
+                version { major 1 minor 0 }
+                struct MyStructType2 {
+                    UInt8 val1
+                    MyEnum val2
+                    String  msg
+                }
+            }
+        """)
+        self.tmp_fidl("common.fidl", """
+            package P
+            typeCollection Common {
+                version { major 1 minor 0 }
+                enumeration MyEnum {
+                    abc
+                    def
+                    ghi
+                    jkm
+                }
+            }
+        """)
+        self.processor.import_file(fspec)
+        self.processor.import_file("./Type1.fidl")
+
+        self.assertEqual(self.processor.packages["P"].name, "P")
+        self.assertEqual(self.processor.packages['P'].interfaces["I"].methods["getData"].
+                         out_args["outVal"].type.reference.namespace.name, "Type1")
+        self.assertEqual(self.processor.packages['P'].interfaces["I"].methods["getData"].
+                         out_args["outVal"].type.reference.namespace.package.name, "P")
+
+        self.assertEqual(self.processor.packages['P'].interfaces["I"].methods["getData"].
+                         in_args["inVal"].type.reference.namespace.name, "Type2")
+        self.assertEqual(self.processor.packages['P'].interfaces["I"].methods["getData"].
+                         in_args["inVal"].type.reference.namespace.package.name, "P")
+
+        self.assertEqual(self.processor.packages['P'].interfaces["I"].namespace_references[0],
+                         self.processor.packages['P'].typecollections["Type1"])
+        self.assertEqual(self.processor.packages['P'].interfaces["I"].namespace_references[1],
+                         self.processor.packages['P'].typecollections["Type2"])
+
+        self.assertEqual(
+            self.processor.packages['P'].interfaces["I"].namespace_references[0].namespace_references[0].name, "Common")
+        self.assertEqual(
+            self.processor.packages['P'].interfaces["I"].namespace_references[1].namespace_references[0].name, "Common")
+
+        # check that interface "I" has no reference to namespace "Common" --> no transitive imports
+        self.assertEqual(len(self.processor.packages['P'].interfaces["I"].namespace_references), 2)
+
+    def test_invalid_type_use(self):
+        # P.fidl references definitions.fidl but it is not in the package path.
+        with self.assertRaises(ProcessorException) as context:
+            self.processor.import_file(
+                os.path.join(self.get_spec("idl3"), "P1.fidl"))
+            self.processor.import_file(
+                os.path.join(self.get_spec("idl3"), "P2.fidl"))
+        self.assertEqual(str(context.exception),
+                         "Unresolved reference 'T1Enum'.")
+
+    # ths test should raise an exception because MyEnum is ambiguous in P.fidl
+    def test_ambiguous_types(self):
+        with self.assertRaises(ProcessorException) as context:
+            self.tmp_fidl("common.fidl", """
+                        package P
+                        typeCollection T1 {
+                            enumeration MyEnum {
+                                abc
+                            }
+                        }
+
+                        typeCollection T2 {
+                            enumeration MyEnum {
+                                abc
+                            }
+                        }
+                    """)
+
+            fspec = self.tmp_fidl("P.fidl", """
+                        package P
+                        import model "common.fidl"
+
+                        interface I {
+                            version { major 1 minor 0 }
+                            method getData {
+                                out {
+                                      MyEnum outVal
+                                   }
+                            }
+                        }
+                    """)
+            self.processor.import_file(fspec)
+
+        self.assertEqual(str(context.exception),
+                     "Reference 'MyEnum' is ambiguous.")
+
+
+    def test_model_import(self):
+        self.tmp_fidl("common.fidl", """
+                    package P
+                    typeCollection T1 {
+                        enumeration Enum_T1 {
+                            abc
+                        }
+                    }
+
+                    typeCollection T2 {
+                        enumeration Enum_T2 {
+                            abc
+                        }
+                    }
+                """)
+
+        fspec = self.tmp_fidl("P.fidl", """
+                    package P
+                    import model "common.fidl"
+
+                    interface I {
+                        version { major 1 minor 0 }
+                        method getData {
+                            out {
+                                  Enum_T1 out_t1
+                                  Enum_T2 out_t2
+                            }
+                        }
+                    }
+                """)
+        self.processor.import_file(fspec)
+        self.assertEqual(self.processor.packages["P"].name, "P")
+        self.assertEqual(self.processor.packages['P'].interfaces["I"].methods["getData"].
+                         out_args["out_t1"].type.reference.namespace.name, "T1")
+        self.assertEqual(self.processor.packages['P'].interfaces["I"].methods["getData"].
+                         out_args["out_t2"].type.reference.namespace.name, "T2")
+
+    def test_type_notations(self):
+            self.tmp_fidl("test.fidl", """
+                package P
+                typeCollection TC {
+                    typedef A is Int32
+                }
+            """)
+            fspec = self.tmp_fidl("test2.fidl", """
+                package P2
+                import P.TC.* from "test.fidl"
+                typeCollection TC2 {
+                    typedef A2 is UInt32
+                }
+                interface I {
+                    typedef B is P2.TC2.A2
+                    typedef B2 is P.TC.A
+
+                    typedef C is TC2.A2
+                    typedef C2 is TC.A
+
+                    typedef D is A2
+                    typedef D2 is A
+                }
+            """)
+            self.processor.import_file(fspec)
+
+            a = self.processor.packages["P"].typecollections["TC"].typedefs["A"]
+            self.assertTrue(isinstance(a.type, ast.Int32))
+            a2 = self.processor.packages["P2"].typecollections["TC2"].typedefs["A2"]
+            self.assertTrue(isinstance(a2.type, ast.UInt32))
+            b = self.processor.packages["P2"].interfaces["I"].typedefs["B"]
+            self.assertTrue(isinstance(b.type, ast.Reference))
+            self.assertEqual(b.type.name, "A2")
+            self.assertEqual(b.type.reference, a2)
+            b2 = self.processor.packages["P2"].interfaces["I"].typedefs["B2"]
+            self.assertTrue(isinstance(b2.type, ast.Reference))
+            self.assertEqual(b2.type.name, "A")
+            self.assertEqual(b2.type.reference, a)
+
+            c = self.processor.packages["P2"].interfaces["I"].typedefs["C"]
+            self.assertTrue(isinstance(c.type, ast.Reference))
+            self.assertEqual(c.type.name, "A2")
+            self.assertEqual(c.type.reference, a2)
+            self.assertEqual(c.type.reference.namespace, self.processor.packages["P2"].typecollections["TC2"])
+
+            c2 = self.processor.packages["P2"].interfaces["I"].typedefs["C2"]
+            self.assertTrue(isinstance(c2.type, ast.Reference))
+            self.assertEqual(c2.type.name, "A")
+            self.assertEqual(c2.type.reference, a)
+
+            d = self.processor.packages["P2"].interfaces["I"].typedefs["D"]
+            self.assertTrue(isinstance(d.type, ast.Reference))
+            self.assertEqual(d.type.name, "A2")
+            self.assertEqual(d.type.reference, a2)
+            d2 = self.processor.packages["P2"].interfaces["I"].typedefs["D2"]
+            self.assertTrue(isinstance(d2.type, ast.Reference))
+            self.assertEqual(d2.type.name, "A")
+            self.assertEqual(d2.type.reference, a)
+
