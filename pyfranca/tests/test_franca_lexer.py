@@ -3,17 +3,31 @@ Pyfranca lexer tests.
 """
 
 import unittest
-
 from pyfranca import Lexer
 
 
 class BaseTestCase(unittest.TestCase):
+
+    def check(self, typeName, value=""):
+        self.assertTrue(self.pos <= len(self.tokenized_data))
+        self.assertEqual(self.tokenized_data[self.pos].type, typeName)
+
+        if value == "":
+            self.assertEqual(self.tokenized_data[self.pos].value, typeName)
+        else:
+            self.assertEqual(self.tokenized_data[self.pos].value, value)
+        self.pos += 1
 
     @staticmethod
     def _tokenize(data):
         lexer = Lexer()
         tokenized_data = lexer.tokenize_data(data)
         return tokenized_data
+
+    def tokenize(self, data):
+        lexer = Lexer()
+        self.tokenized_data = lexer.tokenize_data(data)
+        self.pos = 0
 
 
 class TestCheckRegularExpressions(BaseTestCase):
@@ -203,66 +217,28 @@ class TestCheckRegularExpressions(BaseTestCase):
 
     def test_real_valid_syntax(self):
         """test a real value """
-        tokenized_data = self._tokenize("1.1\n-2.2\n3.3e3\n-4.4e4\n5.5e-5"
+        self.tokenize("1.1\n-2.2\n3.3e3\n-4.4e4\n5.5e-5"
                                         "-6.6e-6\n0.00001\n-0.000002\n1e4\n-1e4"
                                         ".1\n-.2\n.3e3\n-.4e4\n.5e-5"
-                                        "-.6e-6\n.00001\n-.000002"
-                                        )
-
-        cnt = 0
-        self.assertEqual(tokenized_data[cnt].type, "REAL_VAL")
-        self.assertEqual(tokenized_data[0].value, "1.1")
-        cnt += 1
-        self.assertEqual(tokenized_data[cnt].type, "REAL_VAL")
-        self.assertEqual(tokenized_data[cnt].value, "-2.2")
-        cnt += 1
-        self.assertEqual(tokenized_data[cnt].type, "REAL_VAL")
-        self.assertEqual(tokenized_data[cnt].value, "3.3e3")
-        cnt += 1
-        self.assertEqual(tokenized_data[cnt].type, "REAL_VAL")
-        self.assertEqual(tokenized_data[cnt].value, "-4.4e4")
-        cnt += 1
-        self.assertEqual(tokenized_data[cnt].type, "REAL_VAL")
-        self.assertEqual(tokenized_data[cnt].value, "5.5e-5")
-        cnt += 1
-        self.assertEqual(tokenized_data[cnt].type, "REAL_VAL")
-        self.assertEqual(tokenized_data[cnt].value, "-6.6e-6")
-        cnt += 1
-        self.assertEqual(tokenized_data[cnt].type, "REAL_VAL")
-        self.assertEqual(tokenized_data[cnt].value, "0.00001")
-        cnt += 1
-        self.assertEqual(tokenized_data[cnt].type, "REAL_VAL")
-        self.assertEqual(tokenized_data[cnt].value, "-0.000002")
-        cnt += 1
-        self.assertEqual(tokenized_data[cnt].type, "REAL_VAL")
-        self.assertEqual(tokenized_data[cnt].value, "1e4")
-        cnt += 1
-        self.assertEqual(tokenized_data[cnt].type, "REAL_VAL")
-        self.assertEqual(tokenized_data[cnt].value, "-1e4")
-        cnt += 1
-        self.assertEqual(tokenized_data[cnt].type, "REAL_VAL")
-        self.assertEqual(tokenized_data[cnt].value, ".1")
-        cnt += 1
-        self.assertEqual(tokenized_data[cnt].type, "REAL_VAL")
-        self.assertEqual(tokenized_data[cnt].value, "-.2")
-        cnt += 1
-        self.assertEqual(tokenized_data[cnt].type, "REAL_VAL")
-        self.assertEqual(tokenized_data[cnt].value, ".3e3")
-        cnt += 1
-        self.assertEqual(tokenized_data[cnt].type, "REAL_VAL")
-        self.assertEqual(tokenized_data[cnt].value, "-.4e4")
-        cnt += 1
-        self.assertEqual(tokenized_data[cnt].type, "REAL_VAL")
-        self.assertEqual(tokenized_data[cnt].value, ".5e-5")
-        cnt += 1
-        self.assertEqual(tokenized_data[cnt].type, "REAL_VAL")
-        self.assertEqual(tokenized_data[cnt].value, "-.6e-6")
-        cnt += 1
-        self.assertEqual(tokenized_data[cnt].type, "REAL_VAL")
-        self.assertEqual(tokenized_data[cnt].value, ".00001")
-        cnt += 1
-        self.assertEqual(tokenized_data[cnt].type, "REAL_VAL")
-        self.assertEqual(tokenized_data[cnt].value, "-.000002")
+                                        "-.6e-6\n.00001\n-.000002")
+        self.check("REAL_VAL", "1.1")
+        self.check("REAL_VAL", "-2.2")
+        self.check("REAL_VAL", "3.3e3")
+        self.check("REAL_VAL", "-4.4e4")
+        self.check("REAL_VAL", "5.5e-5")
+        self.check("REAL_VAL", "-6.6e-6")
+        self.check("REAL_VAL", "0.00001")
+        self.check("REAL_VAL", "-0.000002")
+        self.check("REAL_VAL", "1e4")
+        self.check("REAL_VAL", "-1e4")
+        self.check("REAL_VAL", ".1")
+        self.check("REAL_VAL", "-.2")
+        self.check("REAL_VAL", ".3e3")
+        self.check("REAL_VAL", "-.4e4")
+        self.check("REAL_VAL", ".5e-5")
+        self.check("REAL_VAL", "-.6e-6")
+        self.check("REAL_VAL", ".00001")
+        self.check("REAL_VAL", "-.000002")
 
     def test_doublefloat_invalid_syntax(self):
         """test a text containing .f """
@@ -276,28 +252,173 @@ class TestCheckRegularExpressions(BaseTestCase):
 
     def test_type_valid_syntax(self):
         """test an integer """
-        tokenized_data = self._tokenize("const Boolean b1 = true")
-        self.assertEqual(tokenized_data[0].type, "CONST")
-        self.assertEqual(tokenized_data[0].value, 'const')
-        self.assertEqual(tokenized_data[1].type, "BOOLEAN")
-        self.assertEqual(tokenized_data[1].value, 'Boolean')
-        self.assertEqual(tokenized_data[2].type, "ID")
-        self.assertEqual(tokenized_data[2].value, 'b1')
-        self.assertEqual(tokenized_data[3].type, "=")
-        self.assertEqual(tokenized_data[3].value, '=')
-        self.assertEqual(tokenized_data[4].type, "BOOLEAN_VAL")
-        self.assertEqual(tokenized_data[4].value, True)
+        self.tokenize("const Boolean b1 = true")
+        self.check("CONST", 'const')
+        self.check("BOOLEAN", 'Boolean')
+        self.check("ID", 'b1')
+        self.check("=", '=')
+        self.check("BOOLEAN_VAL", True)
 
     def test_type_invalid_syntax(self):
         """test an integer """
-        tokenized_data = self._tokenize("const boolean b1 = true")
-        self.assertEqual(tokenized_data[0].type, "CONST")
-        self.assertEqual(tokenized_data[0].value, 'const')
-        self.assertEqual(tokenized_data[1].type, "ID")
-        self.assertEqual(tokenized_data[1].value, 'boolean')
-        self.assertEqual(tokenized_data[2].type, "ID")
-        self.assertEqual(tokenized_data[2].value, 'b1')
-        self.assertEqual(tokenized_data[3].type, "=")
-        self.assertEqual(tokenized_data[3].value, '=')
-        self.assertEqual(tokenized_data[4].type, "BOOLEAN_VAL")
-        self.assertEqual(tokenized_data[4].value, True)
+        self.tokenize("const boolean b1 = true")
+        self.check("CONST", 'const')
+        self.check("ID", 'boolean')
+        self.check("ID", 'b1')
+        self.check("=", '=')
+        self.check("BOOLEAN_VAL", True)
+
+
+    def test_type_mult_expression(self):
+        """test an integer """
+        self.tokenize("const UInt32 abc = 5 * 5")
+        self.check("CONST", 'const')
+        self.check("UINT32", 'UInt32')
+        self.check("ID", 'abc')
+        self.check("=", '=')
+        self.check("INTEGER_VAL", 5)
+        self.check("*")
+        self.check("INTEGER_VAL", 5)
+
+    def test_type_add_expression(self):
+        """test an integer """
+        self.tokenize("const UInt32 abc = 5 + 5")
+        self.check("CONST", 'const')
+        self.check("UINT32", 'UInt32')
+        self.check("ID", 'abc')
+        self.check("=", '=')
+        self.check("INTEGER_VAL", 5)
+        self.check("+")
+        self.check("INTEGER_VAL", 5)
+
+    def test_type_diff_expression(self):
+        """test an integer """
+        self.tokenize("const UInt32 abc = 5 - 5")
+        self.check("CONST", 'const')
+        self.check("UINT32", 'UInt32')
+        self.check("ID", 'abc')
+        self.check("=", '=')
+        self.check("INTEGER_VAL", 5)
+        self.check("-")
+        self.check("INTEGER_VAL", 5)
+
+    def test_type_div_expression(self):
+        """test an integer """
+        self.tokenize("const UInt32 abc = 5 / 5")
+        self.check("CONST", 'const')
+        self.check("UINT32", 'UInt32')
+        self.check("ID", 'abc')
+        self.check("=", '=')
+        self.check("INTEGER_VAL", 5)
+        self.check("/")
+        self.check("INTEGER_VAL", 5)
+
+    def test_type_parenthesis_expression(self):
+        """test an integer """
+        self.tokenize("const UInt32 abc = (5-5)/2")
+        self.check("CONST", 'const')
+        self.check("UINT32", 'UInt32')
+        self.check("ID", 'abc')
+        self.check("=", '=')
+        self.check("(", '(')
+        self.check("INTEGER_VAL", 5)
+        self.check("INTEGER_VAL", -5)
+        self.check(")")
+        self.check("/")
+        self.check("INTEGER_VAL", 2)
+
+    def test_type_bracket_expression_array(self):
+        """test an integer """
+        self.tokenize("const Array1 full = [ 1, 2, 2+3, 100*100+100 ]")
+        self.check("CONST", 'const')
+        self.check("ID", 'Array1')
+        self.check("ID", 'full')
+        self.check("=")
+        self.check("[")
+        self.check("INTEGER_VAL", 1)
+        self.check(",")
+        self.check("INTEGER_VAL", 2)
+        self.check(",")
+        self.check("INTEGER_VAL", 2)
+        self.check("INTEGER_VAL", 3)
+        self.check(",")
+        self.check("INTEGER_VAL", 100)
+        self.check("*")
+        self.check("INTEGER_VAL", 100)
+        self.check("INTEGER_VAL", 100)
+        self.check("]")
+
+    def test_type_brace_expression_aruct(self):
+        """test an integer """
+        self.tokenize("const Struct1 s1 = { e1: true, e2: 1, e3: \"foo\"}")
+        self.check("CONST", 'const')
+        self.check("ID", 'Struct1')
+        self.check("ID", 's1')
+        self.check("=")
+        self.check("{")
+        self.check("ID", "e1")
+        self.check(":")
+        self.check("BOOLEAN_VAL", True)
+        self.check(",")
+        self.check("ID", "e2")
+        self.check(":")
+        self.check("INTEGER_VAL", 1)
+        self.check(",")
+        self.check("ID", "e3")
+        self.check(":")
+        self.check("STRING_VAL", "foo")
+        self.check("}")
+
+    def test_type_brace_expression_map(self):
+        """test an integer """
+        self.tokenize("const Map1 m1 = [ 1 => \"one\", 2 => \"two\"]")
+        self.check("CONST", 'const')
+        self.check("ID", 'Map1')
+        self.check("ID", 'm1')
+        self.check("=")
+        self.check("[")
+        self.check("INTEGER_VAL", 1)
+        self.check("=")
+        self.check(">")
+        self.check("STRING_VAL", "one")
+        self.check(",")
+        self.check("INTEGER_VAL", 2)
+        self.check("=")
+        self.check(">")
+        self.check("STRING_VAL", "two")
+        self.check("]")
+
+    def test_type_boolean_expression(self):
+        """test an integer """
+        self.tokenize("const Boolean b2 = MAX_COUNT > 3")
+        self.check("CONST", 'const')
+        self.check("BOOLEAN", 'Boolean')
+        self.check("ID", 'b2')
+        self.check("=")
+        self.check("ID", 'MAX_COUNT')
+        self.check(">")
+        self.check("INTEGER_VAL", 3)
+
+    def test_type_boolean_expression(self):
+        """test an integer """
+        self.tokenize("const Boolean b3 = (a && b) || foo ==\"bar\"")
+        self.check("CONST", 'const')
+        self.check("BOOLEAN", 'Boolean')
+        self.check("ID", 'b3')
+        self.check("=")
+        self.check("(")
+        self.check("ID", 'a')
+        self.check("&")
+        self.check("&")
+        self.check("ID", 'b')
+        self.check(")")
+        self.check("|")
+        self.check("|")
+        self.check("ID", "foo")
+        self.check("=")
+        self.check("=")
+        self.check("STRING_VAL", "bar")
+
+
+
+

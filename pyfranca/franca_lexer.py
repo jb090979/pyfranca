@@ -87,7 +87,9 @@ class Lexer(object):
     t_ignore = " \t"
 
     # Literals
-    literals = [".", "{", "}", "*", "=", "[", "]"]
+    literals = [".", "{", "}", "*", "=", "[", "]", "+",
+                "-", "*", "/", ">", "<", ",", "&", "|",
+                "(", ")", ":"]
 
     # Identifiers and keywords
     _keyword_map = {}

@@ -317,6 +317,24 @@ class Value(Type):
         self.value = value
 
 
+class Operator(object):
+
+    _metaclass__ = ABCMeta
+
+    def __init__(self, name, operand1, operand2):
+        self.name = name
+        self.operand1 = operand1
+        self.operand2 = operand2
+
+
+class ParentExpression(object):
+
+    _metaclass__ = ABCMeta
+
+    def __init__(self, operator):
+        self.operator = operator
+
+
 class IntegerValue(Value):
 
     BINARY = 2
