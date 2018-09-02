@@ -446,11 +446,12 @@ class Map(ComplexType):
 
 class Constant(ComplexType):
 
-    def __init__(self, name, element_type, element_value, comments=None):
+    def __init__(self, name, element_type, element_value=None, comments=None, element_expression=None):
         super(Constant, self).__init__(comments=comments)
         self.name = name
         self.type = element_type
-        self.value = element_value
+        self.value = element_value    # value from solved expression
+        self.expression = element_expression  # None if value is not a expression, just of simple type
 
 
 class Reference(Type):

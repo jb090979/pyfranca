@@ -781,6 +781,26 @@ class Parser(object):
 
     # noinspection PyIncorrectDocstring
     @staticmethod
+    def p_constant_def_7(p):
+        """
+        constant_def : structured_comment CONST INT8 ID '=' term
+                     | structured_comment CONST INT16 ID '=' term
+                     | structured_comment CONST INT32 ID '=' term
+                     | structured_comment CONST INT64 ID '=' term
+                     | structured_comment CONST UINT8 ID '=' term
+                     | structured_comment CONST UINT16 ID '=' term
+                     | structured_comment CONST UINT32 ID '=' term
+                     | structured_comment CONST UINT64 ID '=' term
+        """
+        type_class = getattr(ast, p[3])
+        p[0] = ast.Constant(name=p[4],
+                            element_type=type_class(),
+                            element_value=None,
+                            comments=p[1],
+                            element_expression=p[6])
+
+    # noinspection PyIncorrectDocstring
+    @staticmethod
     def p_boolean_val(p):
         """
         boolean_val : BOOLEAN_VAL
@@ -901,6 +921,32 @@ class Parser(object):
         """
         element_type = ast.Reference(name=p[1])
         p[0] = ast.Array(name=None, element_type=element_type)
+
+    # noinspection PyIncorrectDocstring
+    @staticmethod
+    def p_term(p):
+        """
+        term : integer_val '+' integer_val
+             | integer_val '-' integer_val
+             | integer_val '*' integer_val
+             | integer_val '/' integer_val
+             | integer_val integer_val
+
+        """
+        operator = ""
+        operand_1 = p[1]
+        operand_2 = p[2]
+        if p[2] not in ("+", "-", "*", "/"):
+            operand_2 = p[2]
+            if p[2].value >= 0:
+                operator = "+"
+            else:
+                operator = "-"
+                operand_2.value = abs(operand_2.value)
+        else:
+            operator = p[2]
+            operand_2 = p[3]
+        p[0] = ast.Operator(name=operator,  operand1=operand_1, operand2=operand_2)
 
     # noinspection PyUnusedLocal, PyIncorrectDocstring
     @staticmethod
