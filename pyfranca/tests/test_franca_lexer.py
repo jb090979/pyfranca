@@ -271,13 +271,15 @@ class TestCheckRegularExpressions(BaseTestCase):
 
     def test_type_mult_expression(self):
         """test an integer """
-        self.tokenize("const UInt32 abc = 5 * 5")
+        self.tokenize("const UInt32 abc = 3 + 5 * 5")
         self.check("CONST", 'const')
         self.check("UINT32", 'UInt32')
         self.check("ID", 'abc')
         self.check("=", '=')
+        self.check("INTEGER_VAL", 3)
+        self.check("OPERATOR", "+")
         self.check("INTEGER_VAL", 5)
-        self.check("*")
+        self.check("OPERATOR", "*")
         self.check("INTEGER_VAL", 5)
 
     def test_type_add_expression(self):
@@ -288,7 +290,7 @@ class TestCheckRegularExpressions(BaseTestCase):
         self.check("ID", 'abc')
         self.check("=", '=')
         self.check("INTEGER_VAL", 5)
-        self.check("+")
+        self.check("OPERATOR", "+")
         self.check("INTEGER_VAL", 5)
 
     def test_type_diff_expression(self):
@@ -299,7 +301,7 @@ class TestCheckRegularExpressions(BaseTestCase):
         self.check("ID", 'abc')
         self.check("=", '=')
         self.check("INTEGER_VAL", 5)
-        self.check("-")
+        self.check("OPERATOR","-")
         self.check("INTEGER_VAL", 5)
 
     def test_type_div_expression(self):
@@ -310,7 +312,7 @@ class TestCheckRegularExpressions(BaseTestCase):
         self.check("ID", 'abc')
         self.check("=", '=')
         self.check("INTEGER_VAL", 5)
-        self.check("/")
+        self.check("OPERATOR","/")
         self.check("INTEGER_VAL", 5)
 
     def test_type_parenthesis_expression(self):
@@ -324,7 +326,7 @@ class TestCheckRegularExpressions(BaseTestCase):
         self.check("INTEGER_VAL", 5)
         self.check("INTEGER_VAL", -5)
         self.check(")")
-        self.check("/")
+        self.check("OPERATOR","/")
         self.check("INTEGER_VAL", 2)
 
     def test_type_bracket_expression_array(self):
@@ -343,7 +345,7 @@ class TestCheckRegularExpressions(BaseTestCase):
         self.check("INTEGER_VAL", 3)
         self.check(",")
         self.check("INTEGER_VAL", 100)
-        self.check("*")
+        self.check("OPERATOR","*")
         self.check("INTEGER_VAL", 100)
         self.check("INTEGER_VAL", 100)
         self.check("]")
@@ -378,13 +380,11 @@ class TestCheckRegularExpressions(BaseTestCase):
         self.check("=")
         self.check("[")
         self.check("INTEGER_VAL", 1)
-        self.check("=")
-        self.check(">")
+        self.check("OPERATOR", "=>")
         self.check("STRING_VAL", "one")
         self.check(",")
         self.check("INTEGER_VAL", 2)
-        self.check("=")
-        self.check(">")
+        self.check("OPERATOR", "=>")
         self.check("STRING_VAL", "two")
         self.check("]")
 
@@ -396,7 +396,7 @@ class TestCheckRegularExpressions(BaseTestCase):
         self.check("ID", 'b2')
         self.check("=")
         self.check("ID", 'MAX_COUNT')
-        self.check(">")
+        self.check("OPERATOR",">")
         self.check("INTEGER_VAL", 3)
 
     def test_type_boolean_expression(self):
@@ -408,15 +408,12 @@ class TestCheckRegularExpressions(BaseTestCase):
         self.check("=")
         self.check("(")
         self.check("ID", 'a')
-        self.check("&")
-        self.check("&")
+        self.check("OPERATOR", "&&")
         self.check("ID", 'b')
         self.check(")")
-        self.check("|")
-        self.check("|")
+        self.check("OPERATOR", "||")
         self.check("ID", "foo")
-        self.check("=")
-        self.check("=")
+        self.check("OPERATOR", "==")
         self.check("STRING_VAL", "bar")
 
 

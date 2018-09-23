@@ -697,91 +697,67 @@ class Parser(object):
     @staticmethod
     def p_constant_def_1(p):
         """
-        constant_def : structured_comment CONST INT8 ID '=' integer_val
-                     | structured_comment CONST INT16 ID '=' integer_val
-                     | structured_comment CONST INT32 ID '=' integer_val
-                     | structured_comment CONST INT64 ID '=' integer_val
-                     | structured_comment CONST UINT8 ID '=' integer_val
-                     | structured_comment CONST UINT16 ID '=' integer_val
-                     | structured_comment CONST UINT32 ID '=' integer_val
-                     | structured_comment CONST UINT64 ID '=' integer_val
+        constant_def : structured_comment CONST DOUBLE ID '=' term
+                     | structured_comment CONST FLOAT ID '=' term
         """
         type_class = getattr(ast, p[3])
-        value = ast.IntegerValue(p[6].value, p[6].base)
-        p[0] = ast.Constant(name=p[4], element_type=type_class(), element_value=value, comments=p[1])
+        if isinstance(p[6], ast.DoubleValue):
+            value = ast.DoubleValue(float(p[6].value))
+            p[0] = ast.Constant(name=p[4], element_type=type_class(), element_value=value, comments=p[1])
+        elif isinstance(p[6], ast.FloatValue):
+            value = ast.FloatValue(float(p[6].value))
+            p[0] = ast.Constant(name=p[4], element_type=type_class(), element_value=value, comments=p[1])
+        elif isinstance(p[6], ast.Operator):
+            real_types = ["FloatValue", "DoubleValue"]
+            if p[6].name in real_types:
+                p[0] = ast.Constant(name=p[4],
+                                    element_type=type_class(),
+                                    element_value=None,
+                                    comments=p[1],
+                                    element_expression=p[6])
+        else:
+            raise ParserException("Implicit conversion from {} to real value is not allowed!"
+                                  .format(p[6].__class__.__name__))
 
     # noinspection PyIncorrectDocstring
     @staticmethod
     def p_constant_def_2(p):
         """
-        constant_def : structured_comment CONST INT8 ID '=' boolean_val
-                     | structured_comment CONST INT16 ID '=' boolean_val
-                     | structured_comment CONST INT32 ID '=' boolean_val
-                     | structured_comment CONST INT64 ID '=' boolean_val
-                     | structured_comment CONST UINT8 ID '=' boolean_val
-                     | structured_comment CONST UINT16 ID '=' boolean_val
-                     | structured_comment CONST UINT32 ID '=' boolean_val
-                     | structured_comment CONST UINT64 ID '=' boolean_val
-                     | structured_comment CONST INT8 ID '=' real_val
-                     | structured_comment CONST INT16 ID '=' real_val
-                     | structured_comment CONST INT32 ID '=' real_val
-                     | structured_comment CONST INT64 ID '=' real_val
-                     | structured_comment CONST UINT8 ID '=' real_val
-                     | structured_comment CONST UINT16 ID '=' real_val
-                     | structured_comment CONST UINT32 ID '=' real_val
-                     | structured_comment CONST UINT64 ID '=' real_val
+        constant_def : structured_comment CONST BOOLEAN ID '=' term
         """
         type_class = getattr(ast, p[3])
-        value = ast.IntegerValue(int(p[6].value))
-        p[0] = ast.Constant(name=p[4], element_type=type_class(), element_value=value, comments=p[1])
+        if isinstance(p[6], ast.BooleanValue):
+            value = ast.BooleanValue(bool(p[6].value))
+            p[0] = ast.Constant(name=p[4], element_type=type_class(), element_value=value, comments=p[1])
+        elif isinstance(p[6], ast.Operator):
+            if p[6].result_type == "BooleanValue":
+                p[0] = ast.Constant(name=p[4],
+                                    element_type=type_class(),
+                                    element_value=None,
+                                    comments=p[1],
+                                    element_expression=p[6])
+        else:
+            raise ParserException("Implicit conversion from {} to boolean value is not allowed!"
+                                  .format(p[6].__class__.__name__))
 
     # noinspection PyIncorrectDocstring
     @staticmethod
     def p_constant_def_3(p):
         """
-        constant_def : structured_comment CONST FLOAT ID '=' integer_val
-                     | structured_comment CONST FLOAT ID '=' boolean_val
-                     | structured_comment CONST FLOAT ID '=' real_val
+        constant_def : structured_comment CONST STRING ID '=' term
         """
         type_class = getattr(ast, p[3])
-        value = ast.FloatValue(float(p[6].value))
-        p[0] = ast.Constant(name=p[4], element_type=type_class(), element_value=value, comments=p[1])
+
+        if isinstance(p[6], ast.StringValue):
+            value = ast.StringValue(str(p[6].value))
+            p[0] = ast.Constant(name=p[4], element_type=type_class(), element_value=value, comments=p[1])
+        else:
+            raise ParserException("Implicit conversion from {} to string value is not allowed!"
+                                  .format(p[6].__class__.__name__))
 
     # noinspection PyIncorrectDocstring
     @staticmethod
     def p_constant_def_4(p):
-        """
-        constant_def : structured_comment CONST DOUBLE ID '=' integer_val
-                     | structured_comment CONST DOUBLE ID '=' boolean_val
-                     | structured_comment CONST DOUBLE ID '=' real_val
-        """
-        type_class = getattr(ast, p[3])
-        value = ast.DoubleValue(float(p[6].value))
-        p[0] = ast.Constant(name=p[4], element_type=type_class(), element_value=value, comments=p[1])
-
-    # noinspection PyIncorrectDocstring
-    @staticmethod
-    def p_constant_def_5(p):
-        """
-        constant_def : structured_comment CONST BOOLEAN ID '=' value
-        """
-        type_class = getattr(ast, p[3])
-        value = ast.BooleanValue(bool(p[6].value))
-        p[0] = ast.Constant(name=p[4], element_type=type_class(), element_value=value, comments=p[1])
-
-    # noinspection PyIncorrectDocstring
-    @staticmethod
-    def p_constant_def_6(p):
-        """
-        constant_def : structured_comment CONST STRING ID '=' value
-        """
-        type_class = getattr(ast, p[3])
-        value = ast.StringValue(str(p[6].value))
-        p[0] = ast.Constant(name=p[4], element_type=type_class(), element_value=value, comments=p[1])
-
-    # noinspection PyIncorrectDocstring
-    @staticmethod
-    def p_constant_def_7(p):
         """
         constant_def : structured_comment CONST INT8 ID '=' term
                      | structured_comment CONST INT16 ID '=' term
@@ -793,11 +769,127 @@ class Parser(object):
                      | structured_comment CONST UINT64 ID '=' term
         """
         type_class = getattr(ast, p[3])
-        p[0] = ast.Constant(name=p[4],
-                            element_type=type_class(),
-                            element_value=None,
-                            comments=p[1],
-                            element_expression=p[6])
+        if p[6].name == "IntegerValue":
+            p[0] = ast.Constant(name=p[4],
+                                element_type=type_class(),
+                                element_value=None,
+                                comments=p[1],
+                                element_expression=p[6])
+        else:
+            raise ParserException("Implicit conversion from {} to integer value is not allowed!"
+                                  .format(p[6].__class__.__name__))
+
+    # noinspection PyIncorrectDocstring
+    @staticmethod
+    def p_term_1(p):
+        """
+        term : value ARITHMETIC_OPERATOR value
+        """
+        value_type_o1 = p[1].name
+        value_type_o2 = p[3].name
+        real_types = ["FloatValue", "DoubleValue"]
+        valid = False
+        if value_type_o1 == value_type_o2:
+            valid = True
+            value_type = value_type_o1
+        elif value_type_o1 in real_types  and value_type_o2 in real_types:
+            valid = True
+            value_type = "DoubleValue"
+
+        if valid:
+            p[0] = ast.Operator(operator=p[2], value_type=value_type, operand1=p[1], operand2=p[3])
+
+    # noinspection PyIncorrectDocstring
+    @staticmethod
+    def p_term_2(p):
+        """
+        term : term ARITHMETIC_OPERATOR value
+        """
+        real_types = ["FloatValue", "DoubleValue"]
+        prio_operators = ["*", "\/"]
+
+        value_type_o1 = p[1].name
+        value_type_o2 = p[3].name
+        valid = False
+        if value_type_o1 == value_type_o2:
+            valid = True
+        elif value_type_o1 in real_types and value_type_o2 in real_types:
+            valid = True
+
+        if valid:
+            if p[2] in prio_operators and p[1].name not in prio_operators:
+                tmp = ast.Operator(operator=p[2], value_type=value_type_o2, operand1=p[1].operand2, operand2=p[3])
+                p[0] = ast.Operator(operator=p[1].operator, value_type=value_type_o1, operand1=p[1].operand1, operand2=tmp)
+            else:
+                p[0] = ast.Operator(operator=p[2], value_type=p[3].name, operand1=p[1], operand2=p[3])
+
+    # noinspection PyIncorrectDocstring
+    @staticmethod
+    def p_term_3(p):
+        """
+        term : term ARITHMETIC_OPERATOR term
+        """
+        real_types = ["FloatValue", "DoubleValue"]
+        prio_operators = ["*", "\/"]
+
+        value_type_o1 = p[1].name
+        value_type_o2 = p[3].name
+        valid = False
+        if value_type_o1 == value_type_o2:
+            valid = True
+        elif value_type_o1 in real_types and value_type_o2 in real_types:
+            valid = True
+
+        if valid:
+            if isinstance(p[1], ast.Operator) and p[2] in prio_operators and p[1].name not in prio_operators:
+                tmp = ast.Operator(operator=p[2], value_type=value_type_o2, operand1=p[1].operand2, operand2=p[3])
+                p[0] = ast.Operator(operator=p[1].operator, value_type=value_type_o1, operand1=p[1].operand1,
+                                    operand2=tmp)
+            else:
+                p[0] = ast.Operator(operator=p[2], value_type=p[3].name, operand1=p[1], operand2=p[3])
+
+    # noinspection PyIncorrectDocstring
+    @staticmethod
+    def p_term_4(p):
+        """
+        term : term  value
+        """
+        real_types = ["FloatValue", "DoubleValue"]
+        value_type_o1 = p[1].name
+        value_type_o2 = p[2].name
+
+        valid = False
+        if "IntegerValue" == value_type_o2:
+            valid = True
+        elif value_type_o1 in real_types and value_type_o2 in real_types:
+            valid = True
+
+        if valid:
+            if p[2].value < 0:
+                tmp_operator = "-"
+                p[2].value = abs(p[2].value)
+            else:
+                tmp_operator = "+"
+            p[0] = ast.Operator(operator=tmp_operator, value_type=p[2].name, operand1=p[1], operand2=p[2])
+        else:
+            raise ParserException("Missing Operator near {}".format(p[2].name))
+
+    # noinspection PyIncorrectDocstring
+    @staticmethod
+    def p_term_5(p):
+        """
+        term : '(' term ')'
+        """
+        p[0] = ast.ParentExpression(term=p[2], value_type=p[2].name)
+
+    # noinspection PyIncorrectDocstring
+    @staticmethod
+    def p_term_6(p):
+        """
+        term : value
+             |
+        """
+        p[0] = p[1]
 
     # noinspection PyIncorrectDocstring
     @staticmethod
@@ -921,32 +1013,6 @@ class Parser(object):
         """
         element_type = ast.Reference(name=p[1])
         p[0] = ast.Array(name=None, element_type=element_type)
-
-    # noinspection PyIncorrectDocstring
-    @staticmethod
-    def p_term(p):
-        """
-        term : integer_val '+' integer_val
-             | integer_val '-' integer_val
-             | integer_val '*' integer_val
-             | integer_val '/' integer_val
-             | integer_val integer_val
-
-        """
-        operator = ""
-        operand_1 = p[1]
-        operand_2 = p[2]
-        if p[2] not in ("+", "-", "*", "/"):
-            operand_2 = p[2]
-            if p[2].value >= 0:
-                operator = "+"
-            else:
-                operator = "-"
-                operand_2.value = abs(operand_2.value)
-        else:
-            operator = p[2]
-            operand_2 = p[3]
-        p[0] = ast.Operator(name=operator,  operand1=operand_1, operand2=operand_2)
 
     # noinspection PyUnusedLocal, PyIncorrectDocstring
     @staticmethod

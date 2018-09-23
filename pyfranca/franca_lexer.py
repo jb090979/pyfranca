@@ -80,15 +80,17 @@ class Lexer(object):
         "REAL_VAL",
         "STRING_VAL",
         "BOOLEAN_VAL",
-        "STRUCTURED_COMMENT"
+        "STRUCTURED_COMMENT",
+        "BOOLEAN_OPERATOR",
+        "ARITHMETIC_OPERATOR",
+        "ASSIGN_OPERATOR"
     ]
 
     # Ignored characters
     t_ignore = " \t"
 
     # Literals
-    literals = [".", "{", "}", "*", "=", "[", "]", "+",
-                "-", "*", "/", ">", "<", ",", "&", "|",
+    literals = [".", "{", "}", "*", "=", "[", "]",  ",",
                 "(", ")", ":"]
 
     # Identifiers and keywords
@@ -179,6 +181,27 @@ class Lexer(object):
             t.value = True
         else:
             t.value = False
+        return t
+
+    # noinspection PyPep8Naming,PyIncorrectDocstring
+    @staticmethod
+    def t_BOOLEAN_OPERATOR(t):
+        # noinspection PySingleQuotedDocstring
+        r"(&&|\|\||>=|<=|<|>|==)"
+        return t
+
+    # noinspection PyPep8Naming,PyIncorrectDocstring
+    @staticmethod
+    def t_ARITHMETIC_OPERATOR(t):
+        # noinspection PySingleQuotedDocstring
+        r"(\*|\/|\+|-)"
+        return t
+
+    # noinspection PyPep8Naming,PyIncorrectDocstring
+    @staticmethod
+    def t_ASSIGN_OPERATOR(t):
+        # noinspection PySingleQuotedDocstring
+        r"(=>)"
         return t
 
     # Identifier

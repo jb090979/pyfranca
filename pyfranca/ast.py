@@ -317,22 +317,24 @@ class Value(Type):
         self.value = value
 
 
-class Operator(object):
+class Operator(Value):
 
     _metaclass__ = ABCMeta
 
-    def __init__(self, name, operand1, operand2):
-        self.name = name
+    def __init__(self, operator, value_type, operand1, operand2):
+        super(Operator, self).__init__(value=None, value_type=value_type)
         self.operand1 = operand1
         self.operand2 = operand2
+        self.operator = operator
 
 
-class ParentExpression(object):
+class ParentExpression(Value):
 
     _metaclass__ = ABCMeta
 
-    def __init__(self, operator):
-        self.operator = operator
+    def __init__(self, term, value_type):
+        super(ParentExpression, self).__init__(value=None, value_type=value_type)
+        self.term = term
 
 
 class IntegerValue(Value):
