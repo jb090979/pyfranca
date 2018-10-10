@@ -1,4 +1,3 @@
-
 import os
 from collections import OrderedDict
 from pyfranca import franca_parser, ast
@@ -86,7 +85,7 @@ class Processor(object):
         pkg, ns, name = Processor.split_fqn(fqn)
 
         resolved_namespace = None
-        count = 0 # number of matches, 0 not found, 1 ok, >1 ambiguous
+        count = 0  # number of matches, 0 not found, 1 ok, >1 ambiguous
         package_fqn = ""
 
         if pkg is not None:
@@ -99,10 +98,15 @@ class Processor(object):
 
         if package_fqn == fqn:
             # fqn is with within this namespace
-            if name in namespace:
+            if (name in namespace.structs) or \
+                    (name in namespace.enumerations) or \
+                    (name in namespace.arrays) or \
+                    (name in namespace.typedefs) or \
+                    (name in namespace.maps) or \
+                    (name in namespace.unions) or \
+                    (name in namespace.arrays):
                 resolved_namespace = namespace[name]
                 count += 1
-
         # lock into visible namespaces
         for ns_ref in namespace.namespace_references:
             if pkg is not None:
@@ -112,7 +116,13 @@ class Processor(object):
                 if ns != ns_ref.name:
                     continue
 
-            if name in ns_ref:
+            if (name in ns_ref.structs) or \
+                    (name in ns_ref.enumerations) or \
+                    (name in ns_ref.arrays) or \
+                    (name in ns_ref.typedefs) or \
+                    (name in ns_ref.maps) or \
+                    (name in namespace.unions) or \
+                    (name in ns_ref.arrays):
                 count += 1
                 resolved_namespace = ns_ref[name]
 
@@ -321,7 +331,6 @@ class Processor(object):
             for ns3 in package.typecollections.values():
                 ns1.namespace_references.append(ns3)
 
-
     def _update_package_references(self, package, imported_package, package_import):
         """
         Update type references in a package.
@@ -432,7 +441,6 @@ class Processor(object):
             self.packages[package.name] = package
             # Register the package file in the processor.
             self.files[abs_fspec] = package
-
 
     def _exists(self, fspec):
         """
