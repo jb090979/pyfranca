@@ -347,6 +347,10 @@ class Processor(object):
             for imported_namespace in imported_package.typecollections.values():
                 if (imported_namespace.name == ns) and (imported_namespace.package.name == p):
                     found = True
+                elif fqn == imported_namespace.package.name:
+                    found = True
+
+                if found:
                     package_import.namespace_reference = imported_namespace
 
                     # reference namespace from imported package to all namespaces in this package
@@ -355,10 +359,15 @@ class Processor(object):
             for imported_namespace in imported_package.interfaces.values():
                 if (imported_namespace.name == ns) and (imported_namespace.package.name == p):
                     found = True
+                elif fqn == imported_namespace.package.name:
+                    found = True
+
+                if found:
                     package_import.namespace_reference = imported_namespace
 
                     # reference namespace from imported package to all namespaces in this package
                     self._update_imported_namespaces_references(package, imported_namespace)
+
             if not found:
                 raise ProcessorException(
                     "Namespace '{}' not found.".format(
