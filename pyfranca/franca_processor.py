@@ -345,24 +345,28 @@ class Processor(object):
             p = self.packagename(fqn)
             found = False
             for imported_namespace in imported_package.typecollections.values():
+                do_update = False
                 if (imported_namespace.name == ns) and (imported_namespace.package.name == p):
-                    found = True
+                    do_update = True
                 elif fqn == imported_namespace.package.name:
-                    found = True
+                    do_update = True
 
-                if found:
+                if do_update:
+                    found = True
                     package_import.namespace_reference = imported_namespace
 
                     # reference namespace from imported package to all namespaces in this package
                     self._update_imported_namespaces_references(package, imported_namespace)
 
             for imported_namespace in imported_package.interfaces.values():
+                do_update = False
                 if (imported_namespace.name == ns) and (imported_namespace.package.name == p):
-                    found = True
+                    do_update = True
                 elif fqn == imported_namespace.package.name:
-                    found = True
+                    do_update = True
 
-                if found:
+                if do_update:
+                    found = True
                     package_import.namespace_reference = imported_namespace
 
                     # reference namespace from imported package to all namespaces in this package

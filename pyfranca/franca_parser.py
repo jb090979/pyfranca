@@ -70,7 +70,7 @@ class Parser(object):
         :param comment: Structured comment of an Franca-IDL symbol to parse.
         :return: OrderedDict of all comments. Key is Franca-IDL keyword, e.g. @description, value conatins the text.
         """
-        keys = ['@description', '@author', '@deprecated', '@source_uri', '@source_alias', '@see', '@experimental']
+        keys = ['@description', '@author', '@deprecated', '@source-uri', '@source-alias', '@see', '@experimental']
 
         strings = re.split('(' + '|'.join(keys) + ')', comment)
 
