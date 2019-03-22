@@ -783,54 +783,28 @@ class Parser(object):
     @staticmethod
     def p_term_1(p):
         """
-        term : value ARITHMETIC_OPERATOR value
+        term : value
         """
-        value_type_o1 = p[1].name
-        value_type_o2 = p[3].name
-        real_types = ["FloatValue", "DoubleValue"]
-        valid = False
-        if value_type_o1 == value_type_o2:
-            valid = True
-            value_type = value_type_o1
-        elif value_type_o1 in real_types  and value_type_o2 in real_types:
-            valid = True
-            value_type = "DoubleValue"
-
-        if valid:
-            p[0] = ast.Operator(operator=p[2], value_type=value_type, operand1=p[1], operand2=p[3])
+        p[0] = p[1]
 
     # noinspection PyIncorrectDocstring
     @staticmethod
     def p_term_2(p):
         """
-        term : term ARITHMETIC_OPERATOR value
+        term : '(' term ')'
+        term : '(' value ')'
         """
-        real_types = ["FloatValue", "DoubleValue"]
-        prio_operators = ["*", "\/"]
-
-        value_type_o1 = p[1].name
-        value_type_o2 = p[3].name
-        valid = False
-        if value_type_o1 == value_type_o2:
-            valid = True
-        elif value_type_o1 in real_types and value_type_o2 in real_types:
-            valid = True
-
-        if valid:
-            if p[2] in prio_operators and p[1].name not in prio_operators:
-                tmp = ast.Operator(operator=p[2], value_type=value_type_o2, operand1=p[1].operand2, operand2=p[3])
-                p[0] = ast.Operator(operator=p[1].operator, value_type=value_type_o1, operand1=p[1].operand1, operand2=tmp)
-            else:
-                p[0] = ast.Operator(operator=p[2], value_type=p[3].name, operand1=p[1], operand2=p[3])
+        p[0] = ast.ParentExpression(term=p[2], value_type=p[2].name)
 
     # noinspection PyIncorrectDocstring
     @staticmethod
     def p_term_3(p):
         """
         term : term ARITHMETIC_OPERATOR term
+        term : term ARITHMETIC_OPERATOR value
         """
         real_types = ["FloatValue", "DoubleValue"]
-        prio_operators = ["*", "\/"]
+        prio_operators = ["*", "/"]
 
         value_type_o1 = p[1].name
         value_type_o2 = p[3].name
@@ -841,10 +815,10 @@ class Parser(object):
             valid = True
 
         if valid:
-            if isinstance(p[1], ast.Operator) and p[2] in prio_operators and p[1].name not in prio_operators:
-                tmp = ast.Operator(operator=p[2], value_type=value_type_o2, operand1=p[1].operand2, operand2=p[3])
-                p[0] = ast.Operator(operator=p[1].operator, value_type=value_type_o1, operand1=p[1].operand1,
-                                    operand2=tmp)
+            if isinstance(p[3], ast.Operator) and p[2] in prio_operators and p[3].operator not in prio_operators:
+                tmp = ast.Operator(operator=p[2], value_type=value_type_o1, operand1=p[1], operand2=p[3].operand1)
+                p[0] = ast.Operator(operator=p[3].operator, value_type=value_type_o2, operand1=tmp,
+                                    operand2=p[3].operand2)
             else:
                 p[0] = ast.Operator(operator=p[2], value_type=p[3].name, operand1=p[1], operand2=p[3])
 
@@ -852,6 +826,7 @@ class Parser(object):
     @staticmethod
     def p_term_4(p):
         """
+        term : term  term
         term : term  value
         """
         real_types = ["FloatValue", "DoubleValue"]
@@ -859,7 +834,7 @@ class Parser(object):
         value_type_o2 = p[2].name
 
         valid = False
-        if "IntegerValue" == value_type_o2:
+        if "IntegerValue" == value_type_o1 and "IntegerValue" == value_type_o2:
             valid = True
         elif value_type_o1 in real_types and value_type_o2 in real_types:
             valid = True
@@ -874,22 +849,7 @@ class Parser(object):
         else:
             raise ParserException("Missing Operator near {}".format(p[2].name))
 
-    # noinspection PyIncorrectDocstring
-    @staticmethod
-    def p_term_5(p):
-        """
-        term : '(' term ')'
-        """
-        p[0] = ast.ParentExpression(term=p[2], value_type=p[2].name)
 
-    # noinspection PyIncorrectDocstring
-    @staticmethod
-    def p_term_6(p):
-        """
-        term : value
-             |
-        """
-        p[0] = p[1]
 
     # noinspection PyIncorrectDocstring
     @staticmethod
