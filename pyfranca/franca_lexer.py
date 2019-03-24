@@ -82,7 +82,10 @@ class Lexer(object):
         "BOOLEAN_VAL",
         "STRUCTURED_COMMENT",
         "BOOLEAN_OPERATOR",
-        "ARITHMETIC_OPERATOR",
+        "ADDITION_OPERATOR",
+        "SUBTRACTION_OPERATOR",
+        "MULTIPLICATION_OPERATOR",
+        "DIVISION_OPERATOR",
         "ASSIGN_OPERATOR"
     ]
 
@@ -192,9 +195,30 @@ class Lexer(object):
 
     # noinspection PyPep8Naming,PyIncorrectDocstring
     @staticmethod
-    def t_ARITHMETIC_OPERATOR(t):
+    def t_ADDITION_OPERATOR(t):
         # noinspection PySingleQuotedDocstring
-        r"(\*|\/|\+|-)"
+        r"(\+)"
+        return t
+
+    # noinspection PyPep8Naming,PyIncorrectDocstring
+    @staticmethod
+    def t_SUBTRACTION_OPERATOR(t):
+        # noinspection PySingleQuotedDocstring
+        r"(\-)"
+        return t
+
+    # noinspection PyPep8Naming,PyIncorrectDocstring
+    @staticmethod
+    def t_MULTIPLICATION_OPERATOR(t):
+        # noinspection PySingleQuotedDocstring
+        r"(\*)"
+        return t
+
+    # noinspection PyPep8Naming,PyIncorrectDocstring
+    @staticmethod
+    def t_DIVISION_OPERATOR(t):
+        # noinspection PySingleQuotedDocstring
+        r"(\/)"
         return t
 
     # noinspection PyPep8Naming,PyIncorrectDocstring

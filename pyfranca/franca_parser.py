@@ -63,6 +63,34 @@ class Parser(object):
         return imports, interfaces, typecollections
 
     @staticmethod
+    def get_result_type(type1, type2):
+        real_types = ["FloatValue", "DoubleValue"]
+        special_types = ["StringValue", "ByteBuffer"]
+        integer_val = ["Int8", "UInt8", "Int16", "UInt16", "Int32", "UInt32",  "Int64", "UInt64"]
+
+        result_type = type1
+
+        if type1 in integer_val and type2 in integer_val:
+            'cast to integer with higher rank'
+            index1 = integer_val.index(type1)
+            index2 = integer_val.index(type2)
+            if index1 < index2:
+                result_type = index2
+            elif index2 > index1:
+                result_type = index1
+        elif type1 in integer_val and type2 not in integer_val:
+            raise ParserException("There is no implicit conversion from Integer to {}".format(type2))
+        elif type1 == "Float" and type2 != "Float":
+            raise ParserException("There is no implicit conversion from Float to {}".format(type2))
+        elif type1 == "Double" and type2 != "Double":
+            raise ParserException("There is no implicit conversion from Float to {}".format(type2))
+        elif type1 != type2:
+            'Todo Franca supports upcasts for inheration --> cuurently '
+            'not supported. So there is no explicit conversion'
+            raise ParserException("There is no implicit conversion from {} to {}".format(type1, type2))
+        return result_type
+
+    @staticmethod
     def parse_structured_comment(comment):
         """
         Parse a structured comment.
@@ -155,6 +183,7 @@ class Parser(object):
     def p_fqn_1(p):
         """
         fqn : ID '.' fqn
+            | ID '.' ID
         """
         p[0] = "{}.{}".format(p[1], p[3])
 
@@ -170,7 +199,7 @@ class Parser(object):
     @staticmethod
     def p_fqn_3(p):
         """
-        fqn : '*'
+        fqn : MULTIPLICATION_OPERATOR
         """
         p[0] = p[1]
 
@@ -178,9 +207,10 @@ class Parser(object):
     @staticmethod
     def p_import_def_1(p):
         """
-        def : IMPORT fqn FROM STRING_VAL
+        def : IMPORT ID '.' MULTIPLICATION_OPERATOR FROM STRING_VAL
         """
-        p[0] = ast.Import(file_name=p[4], namespace=p[2])
+        fqn = p[2]+p[3]+p[4]
+        p[0] = ast.Import(file_name=p[6], namespace=fqn)
 
     # noinspection PyIncorrectDocstring
     @staticmethod
@@ -189,6 +219,14 @@ class Parser(object):
         def : IMPORT MODEL STRING_VAL
         """
         p[0] = ast.Import(file_name=p[3])
+
+    # noinspection PyIncorrectDocstring
+    @staticmethod
+    def p_import_def_3(p):
+        """
+        def : IMPORT ID FROM STRING_VAL
+        """
+        p[0] = ast.Import(file_name=p[4], namespace=p[2])
 
     # noinspection PyIncorrectDocstring
     @staticmethod
@@ -566,8 +604,12 @@ class Parser(object):
     def p_enumerator_2(p):
         """
         enumerator : structured_comment ID '=' integer_val
+                   | structured_comment ID '=' term
         """
-        p[0] = ast.Enumerator(name=p[2], value=p[4], comments=p[1])
+        if isinstance(p[4], ast.Operator):
+            if p[4].name != "IntegerValue":
+                raise  ParserException("Enumerator have to be of type Integer. But expression is of type: '{}'.".format(p[4].name))
+        p[0] = ast.Enumerator(name=p[2], element_expression=p[4], comments=p[1])
 
     # noinspection PyIncorrectDocstring
     @staticmethod
@@ -695,161 +737,73 @@ class Parser(object):
 
     # noinspection PyIncorrectDocstring
     @staticmethod
-    def p_constant_def_1(p):
+    def p_constant_def(p):
         """
-        constant_def : structured_comment CONST DOUBLE ID '=' term
-                     | structured_comment CONST FLOAT ID '=' term
+        constant_def : structured_comment CONST type ID '=' term
+                     | structured_comment CONST type ID '=' value
         """
-        type_class = getattr(ast, p[3])
-        if isinstance(p[6], ast.DoubleValue):
-            value = ast.DoubleValue(float(p[6].value))
-            p[0] = ast.Constant(name=p[4], element_type=type_class(), element_value=value, comments=p[1])
-        elif isinstance(p[6], ast.FloatValue):
-            value = ast.FloatValue(float(p[6].value))
-            p[0] = ast.Constant(name=p[4], element_type=type_class(), element_value=value, comments=p[1])
-        elif isinstance(p[6], ast.Operator):
-            real_types = ["FloatValue", "DoubleValue"]
-            if p[6].name in real_types:
-                p[0] = ast.Constant(name=p[4],
-                                    element_type=type_class(),
-                                    element_value=None,
-                                    comments=p[1],
-                                    element_expression=p[6])
+        integer_val = ["Int8", "Int16", "Int32", "Int64", "UInt8", "UInt16", "UInt32", "UInt64"]
+        const_type = getattr(ast, p[3].name, None)
+        term_type = getattr(ast, p[6].name, None)
+
+        if not const_type:
+            raise ParserException("Unknown value type: {}".format(p[3].name))
+        elif not term_type:
+            raise ParserException("Unknown value type: {}".format(p[6].name))
+        elif p[3].name != Parser.get_result_type(p[3].name, p[6].name):
+            raise ParserException("An expression of type {} cannot be assign to type {}".format(p[6].name, p[3].name))
         else:
-            raise ParserException("Implicit conversion from {} to real value is not allowed!"
-                                  .format(p[6].__class__.__name__))
-
-    # noinspection PyIncorrectDocstring
-    @staticmethod
-    def p_constant_def_2(p):
-        """
-        constant_def : structured_comment CONST BOOLEAN ID '=' term
-        """
-        type_class = getattr(ast, p[3])
-        if isinstance(p[6], ast.BooleanValue):
-            value = ast.BooleanValue(bool(p[6].value))
-            p[0] = ast.Constant(name=p[4], element_type=type_class(), element_value=value, comments=p[1])
-        elif isinstance(p[6], ast.Operator):
-            if p[6].result_type == "BooleanValue":
-                p[0] = ast.Constant(name=p[4],
-                                    element_type=type_class(),
-                                    element_value=None,
-                                    comments=p[1],
-                                    element_expression=p[6])
-        else:
-            raise ParserException("Implicit conversion from {} to boolean value is not allowed!"
-                                  .format(p[6].__class__.__name__))
-
-    # noinspection PyIncorrectDocstring
-    @staticmethod
-    def p_constant_def_3(p):
-        """
-        constant_def : structured_comment CONST STRING ID '=' term
-        """
-        type_class = getattr(ast, p[3])
-
-        if isinstance(p[6], ast.StringValue):
-            value = ast.StringValue(str(p[6].value))
-            p[0] = ast.Constant(name=p[4], element_type=type_class(), element_value=value, comments=p[1])
-        else:
-            raise ParserException("Implicit conversion from {} to string value is not allowed!"
-                                  .format(p[6].__class__.__name__))
-
-    # noinspection PyIncorrectDocstring
-    @staticmethod
-    def p_constant_def_4(p):
-        """
-        constant_def : structured_comment CONST INT8 ID '=' term
-                     | structured_comment CONST INT16 ID '=' term
-                     | structured_comment CONST INT32 ID '=' term
-                     | structured_comment CONST INT64 ID '=' term
-                     | structured_comment CONST UINT8 ID '=' term
-                     | structured_comment CONST UINT16 ID '=' term
-                     | structured_comment CONST UINT32 ID '=' term
-                     | structured_comment CONST UINT64 ID '=' term
-        """
-        type_class = getattr(ast, p[3])
-        if p[6].name == "IntegerValue":
             p[0] = ast.Constant(name=p[4],
-                                element_type=type_class(),
+                                element_type=const_type(),
                                 element_value=None,
                                 comments=p[1],
                                 element_expression=p[6])
-        else:
-            raise ParserException("Implicit conversion from {} to integer value is not allowed!"
-                                  .format(p[6].__class__.__name__))
 
     # noinspection PyIncorrectDocstring
     @staticmethod
     def p_term_1(p):
         """
-        term : value
-        """
-        p[0] = p[1]
-
-    # noinspection PyIncorrectDocstring
-    @staticmethod
-    def p_term_2(p):
-        """
-        term : '(' term ')'
         term : '(' value ')'
+             | '(' term ')'
         """
         p[0] = ast.ParentExpression(term=p[2], value_type=p[2].name)
 
     # noinspection PyIncorrectDocstring
     @staticmethod
-    def p_term_3(p):
+    def p_term2_(p):
         """
-        term : term ARITHMETIC_OPERATOR term
-        term : term ARITHMETIC_OPERATOR value
+        term : value arithmetic_operator term
+             | term arithmetic_operator term
+             | term arithmetic_operator value
+             | value arithmetic_operator value
         """
-        real_types = ["FloatValue", "DoubleValue"]
+
         prio_operators = ["*", "/"]
 
-        value_type_o1 = p[1].name
-        value_type_o2 = p[3].name
-        valid = False
-        if value_type_o1 == value_type_o2:
-            valid = True
-        elif value_type_o1 in real_types and value_type_o2 in real_types:
-            valid = True
+        if isinstance(p[3], ast.Operator) and p[2] in prio_operators and p[3].operator not in prio_operators:
+            type_name = Parser.get_result_type(p[1].name, p[3].operand1.name)
+            op_tmp = ast.Operator(operator=p[2], value_type=type_name, operand1=p[1], operand2=p[3].operand1)
 
-        if valid:
-            if isinstance(p[3], ast.Operator) and p[2] in prio_operators and p[3].operator not in prio_operators:
-                tmp = ast.Operator(operator=p[2], value_type=value_type_o1, operand1=p[1], operand2=p[3].operand1)
-                p[0] = ast.Operator(operator=p[3].operator, value_type=value_type_o2, operand1=tmp,
-                                    operand2=p[3].operand2)
-            else:
-                p[0] = ast.Operator(operator=p[2], value_type=p[3].name, operand1=p[1], operand2=p[3])
+            type_name = Parser.get_result_type(op_tmp.name, p[3].operand2.name)
+            p[0] = ast.Operator(operator=p[3].operator, value_type=type_name, operand1=op_tmp,
+                                operand2=p[3].operand2)
+        else:
+            type_name = Parser.get_result_type(p[1].name, p[3].name)
+            p[0] = ast.Operator(operator=p[2], value_type=type_name, operand1=p[1], operand2=p[3])
 
     # noinspection PyIncorrectDocstring
     @staticmethod
-    def p_term_4(p):
+    def p_term_3(p):
         """
-        term : term  term
         term : term  value
+             | value value
         """
-        real_types = ["FloatValue", "DoubleValue"]
-        value_type_o1 = p[1].name
-        value_type_o2 = p[2].name
-
-        valid = False
-        if "IntegerValue" == value_type_o1 and "IntegerValue" == value_type_o2:
-            valid = True
-        elif value_type_o1 in real_types and value_type_o2 in real_types:
-            valid = True
-
-        if valid:
-            if p[2].value < 0:
-                tmp_operator = "-"
-                p[2].value = abs(p[2].value)
-            else:
-                tmp_operator = "+"
-            p[0] = ast.Operator(operator=tmp_operator, value_type=p[2].name, operand1=p[1], operand2=p[2])
+        if p[2].value < 0:
+            tmp_operator = "-"
+            p[2].value = abs(p[2].value)
         else:
-            raise ParserException("Missing Operator near {}".format(p[2].name))
-
-
+            tmp_operator = "+"
+        p[0] = ast.Operator(operator=tmp_operator, value_type=p[2].name, operand1=p[1], operand2=p[2])
 
     # noinspection PyIncorrectDocstring
     @staticmethod
@@ -857,7 +811,7 @@ class Parser(object):
         """
         boolean_val : BOOLEAN_VAL
         """
-        p[0] = ast.BooleanValue(p[1])
+        p[0] = ast.BooleanValue(bool(p[1]))
 
     # noinspection PyIncorrectDocstring
     @staticmethod
@@ -902,7 +856,7 @@ class Parser(object):
         """
         string_val : STRING_VAL
         """
-        p[0] = ast.StringValue(p[1])
+        p[0] = ast.StringValue(str(p[1]))
 
     # noinspection PyIncorrectDocstring
     @staticmethod
@@ -973,6 +927,17 @@ class Parser(object):
         """
         element_type = ast.Reference(name=p[1])
         p[0] = ast.Array(name=None, element_type=element_type)
+
+    # noinspection PyIncorrectDocstring
+    @staticmethod
+    def p_arithmetic_operator(p):
+        """
+        arithmetic_operator : ADDITION_OPERATOR
+                            | SUBTRACTION_OPERATOR
+                            | MULTIPLICATION_OPERATOR
+                            | DIVISION_OPERATOR
+        """
+        p[0] = p[1]
 
     # noinspection PyUnusedLocal, PyIncorrectDocstring
     @staticmethod

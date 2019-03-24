@@ -177,11 +177,11 @@ class TestTopLevel(BaseTestCase):
         self.assertEqual(package.typecollections['TC'].unions['U'].fields['a'].comments["@description"], "member a")
         self.assertEqual(package.typecollections['TC'].unions['U'].fields['b'].comments["@description"], "member b")
         self.assertEqual(package.typecollections['TC'].enumerations['E'].comments['@description'], "enumeration E")
-        self.assertEqual(package.typecollections['TC'].enumerations['E'].enumerators['a'].value.value, 1)
+        self.assertEqual(package.typecollections['TC'].enumerations['E'].enumerators['a'].expression.value, 1)
         self.assertEqual(
             package.typecollections['TC'].enumerations['E'].enumerators['a'].comments["@description"],
             "enum member a")
-        self.assertEqual(package.typecollections['TC'].enumerations['E'].enumerators['b'].value.value, 2)
+        self.assertEqual(package.typecollections['TC'].enumerations['E'].enumerators['b'].expression.value, 2)
         self.assertEqual(
             package.typecollections['TC'].enumerations['E'].enumerators['b'].comments['@description'],
             "enum member b")
@@ -471,7 +471,7 @@ class TestUnsupported(BaseTestCase):
                 }
             """)
         self.assertEqual(str(context.exception),
-                         "Syntax error at line 5 near 'Array1'.")
+                         "Syntax error at line 5 near '['.")
 
     def test_error_extending(self):
         """Franca 0.9.2, section 5.5.3"""
@@ -863,7 +863,7 @@ class TestEnumerations(BaseTestCase):
         self.assertEqual(len(e.enumerators), 2)
         ee = e.enumerators["FALSE"]
         self.assertEqual(ee.name, "FALSE")
-        self.assertEqual(ee.value.value, 0)
+        self.assertEqual(ee.expression.value, 0)
         ee = e.enumerators["TRUE"]
         self.assertEqual(ee.name, "TRUE")
         self.assertIsNone(ee.value)
@@ -894,10 +894,10 @@ class TestEnumerations(BaseTestCase):
         self.assertEqual(len(e.enumerators), 2)
         ee = e.enumerators["A"]
         self.assertEqual(ee.name, "A")
-        self.assertEqual(ee.value.value, 10)
+        self.assertEqual(ee.expression.value, 10)
         ee = e.enumerators["B"]
         self.assertEqual(ee.name, "B")
-        self.assertEqual(ee.value.value, 0xABC)
+        self.assertEqual(ee.expression.value, 0xABC)
         e2 = typecollection.enumerations["E2"]
         self.assertEqual(e2.namespace, typecollection)
         self.assertEqual(e2.name, "E2")
@@ -925,10 +925,10 @@ class TestEnumerations(BaseTestCase):
         self.assertEqual(len(e.enumerators), 2)
         ee = e.enumerators["A"]
         self.assertEqual(ee.name, "A")
-        self.assertEqual(ee.value.value, 0b10)
+        self.assertEqual(ee.expression.value, 0b10)
         ee = e.enumerators["B"]
         self.assertEqual(ee.name, "B")
-        self.assertEqual(ee.value.value, 0b011)
+        self.assertEqual(ee.expression.value, 0b011)
         e2 = typecollection.enumerations["E2"]
         self.assertEqual(e2.namespace, typecollection)
         self.assertEqual(e2.name, "E2")
@@ -949,7 +949,7 @@ class TestEnumerations(BaseTestCase):
             }
         """)
         self.assertEqual(str(context.exception),
-                         "Syntax error at line 5 near '0.123f'.")
+                         "Syntax error at line 6 near 'B'.")
 
     def test_duplicate_enumerator(self):
         with self.assertRaises(ParserException) as context:
@@ -1183,167 +1183,57 @@ class TestConstants(BaseTestCase):
 
         self.assertEqual(typecollection.constants["MAX_COUNT"].name, "MAX_COUNT")
         self.assertEqual(typecollection.constants["MAX_COUNT"].type.name, "UInt32")
-        self.assertEqual(typecollection.constants["MAX_COUNT"].value.value, 10000)
-        self.assertEqual(typecollection.constants["MAX_COUNT"].value.name, "IntegerValue")
-        self.assertEqual(typecollection.constants["MAX_COUNT"].value.base, ast.IntegerValue.DECIMAL)
+        self.assertEqual(typecollection.constants["MAX_COUNT"].expression.value, 10000)
+        self.assertEqual(typecollection.constants["MAX_COUNT"].expression.name, "Int16")
+        self.assertEqual(typecollection.constants["MAX_COUNT"].expression.base, ast.IntegerValue.DECIMAL)
 
         self.assertEqual(typecollection.constants["MAX_COUNT_HEX"].name, "MAX_COUNT_HEX")
         self.assertEqual(typecollection.constants["MAX_COUNT_HEX"].type.name, "UInt32")
-        self.assertEqual(typecollection.constants["MAX_COUNT_HEX"].value.value, 0x10000)
-        self.assertEqual(typecollection.constants["MAX_COUNT_HEX"].value.name, "IntegerValue")
-        self.assertEqual(typecollection.constants["MAX_COUNT_HEX"].value.base, ast.IntegerValue.HEXADECIMAL)
+        self.assertEqual(typecollection.constants["MAX_COUNT_HEX"].expression.value, 0x10000)
+        self.assertEqual(typecollection.constants["MAX_COUNT_HEX"].expression.name, "Int32")
+        self.assertEqual(typecollection.constants["MAX_COUNT_HEX"].expression.base, ast.IntegerValue.HEXADECIMAL)
 
         self.assertEqual(typecollection.constants["MAX_COUNT_BIN"].name, "MAX_COUNT_BIN")
         self.assertEqual(typecollection.constants["MAX_COUNT_BIN"].type.name, "UInt32")
-        self.assertEqual(typecollection.constants["MAX_COUNT_BIN"].value.value, 0b10000)
-        self.assertEqual(typecollection.constants["MAX_COUNT_BIN"].value.name, "IntegerValue")
-        self.assertEqual(typecollection.constants["MAX_COUNT_BIN"].value.base, ast.IntegerValue.BINARY)
+        self.assertEqual(typecollection.constants["MAX_COUNT_BIN"].expression.value, 0b10000)
+        self.assertEqual(typecollection.constants["MAX_COUNT_BIN"].expression.name, "Int8")
+        self.assertEqual(typecollection.constants["MAX_COUNT_BIN"].expression.base, ast.IntegerValue.BINARY)
 
         self.assertEqual(typecollection.constants["pi"].name, "pi")
         self.assertEqual(typecollection.constants["pi"].type.name, "Double")
-        self.assertEqual(typecollection.constants["pi"].value.value, 3.1415)
-        self.assertEqual(typecollection.constants["pi"].value.name, "DoubleValue")
+        self.assertEqual(typecollection.constants["pi"].expression.value, 3.1415)
+        self.assertEqual(typecollection.constants["pi"].expression.name, "Double")
 
         self.assertEqual(typecollection.constants["f1"].name, "f1")
         self.assertEqual(typecollection.constants["f1"].type.name, "Float")
-        self.assertAlmostEqual(typecollection.constants["f1"].value.value, 1.2)
-        self.assertEqual(typecollection.constants["f1"].value.name, "FloatValue")
+        self.assertAlmostEqual(typecollection.constants["f1"].expression.value, 1.2)
+        self.assertEqual(typecollection.constants["f1"].expression.name, "Float")
 
         self.assertEqual(typecollection.constants["f2"].name, "f2")
         self.assertEqual(typecollection.constants["f2"].type.name, "Float")
-        self.assertAlmostEqual(typecollection.constants["f2"].value.value, 6.022e23)
-        self.assertEqual(typecollection.constants["f2"].value.name, "FloatValue")
+        self.assertAlmostEqual(typecollection.constants["f2"].expression.value, 6.022e23)
+        self.assertEqual(typecollection.constants["f2"].expression.name, "Float")
 
         self.assertEqual(typecollection.constants["b1"].name, "b1")
         self.assertEqual(typecollection.constants["b1"].type.name, "Boolean")
-        self.assertEqual(typecollection.constants["b1"].value.value, True)
-        self.assertEqual(typecollection.constants["b1"].value.name, "BooleanValue")
+        self.assertEqual(typecollection.constants["b1"].expression.value, True)
+        self.assertEqual(typecollection.constants["b1"].expression.name, "Boolean")
 
         self.assertEqual(typecollection.constants["b2"].name, "b2")
         self.assertEqual(typecollection.constants["b2"].type.name, "Boolean")
-        self.assertEqual(typecollection.constants["b2"].value.value, False)
-        self.assertEqual(typecollection.constants["b2"].value.name, "BooleanValue")
+        self.assertEqual(typecollection.constants["b2"].expression.value, False)
+        self.assertEqual(typecollection.constants["b2"].expression.name, "Boolean")
 
         self.assertEqual(typecollection.constants["s1"].name, "s1")
         self.assertEqual(typecollection.constants["s1"].type.name, "String")
-        self.assertAlmostEqual(typecollection.constants["s1"].value.value, "Hello")
-        self.assertEqual(typecollection.constants["s1"].value.name, "StringValue")
+        self.assertAlmostEqual(typecollection.constants["s1"].expression.value, "Hello")
+        self.assertEqual(typecollection.constants["s1"].expression.name, "String")
 
         self.assertEqual(typecollection.constants["s2"].name, "s2")
         self.assertEqual(typecollection.constants["s2"].type.name, "String")
-        self.assertAlmostEqual(typecollection.constants["s2"].value.value,
+        self.assertAlmostEqual(typecollection.constants["s2"].expression.value,
                                "Hello\n                                   World")
-        self.assertEqual(typecollection.constants["s2"].value.name, "StringValue")
-
-    def test_constants_casting(self):
-        """Franca 0.9.2, section 5.2.1"""
-        package = self._parse("""
-            package P
-            typeCollection TC {
-                const Float f1 = 123
-                const Float f2 = true
-                const Double d1 = 123
-                const Double d2 = true
-                const Boolean b1 = 123
-                const Boolean b2 = 123.0f
-                const Boolean b3 = 0.0d
-                const Boolean b4 = "123"
-                const String s1 = 123
-                const String s2 = 123.0f
-                const String s3 = 0.0d
-                const String s4 = true
-            }
-        """)
-        self.assertEqual(package.name, "P")
-        self.assertEqual(package.files, [])
-        self.assertEqual(len(package.imports), 0)
-        self.assertEqual(len(package.typecollections), 1)
-        self.assertEqual(len(package.interfaces), 0)
-        self.assertTrue("TC" in package.typecollections)
-        typecollection = package.typecollections["TC"]
-        self.assertEqual(typecollection.package, package)
-        self.assertEqual(typecollection.name, "TC")
-        self.assertListEqual(typecollection.flags, [])
-        self.assertIsNone(typecollection.version)
-        self.assertEqual(len(typecollection.typedefs), 0)
-        self.assertEqual(len(typecollection.enumerations), 0)
-        self.assertEqual(len(typecollection.structs), 0)
-        self.assertEqual(len(typecollection.unions), 0)
-        self.assertEqual(len(typecollection.arrays), 0)
-        self.assertEqual(len(typecollection.maps), 0)
-        self.assertEqual(len(typecollection.constants), 12)
-
-        x = "f1"
-        self.assertEqual(typecollection.constants[x].name, x)
-        self.assertEqual(typecollection.constants[x].type.name, "Float")
-        self.assertAlmostEqual(typecollection.constants[x].value.value, 123.0)
-        self.assertEqual(typecollection.constants[x].value.name, "FloatValue")
-
-        x = "f2"
-        self.assertEqual(typecollection.constants[x].name, x)
-        self.assertEqual(typecollection.constants[x].type.name, "Float")
-        self.assertAlmostEqual(typecollection.constants[x].value.value, 1.0)
-        self.assertEqual(typecollection.constants[x].value.name, "FloatValue")
-
-        x = "d1"
-        self.assertEqual(typecollection.constants[x].name, x)
-        self.assertEqual(typecollection.constants[x].type.name, "Double")
-        self.assertAlmostEqual(typecollection.constants[x].value.value, 123.0)
-        self.assertEqual(typecollection.constants[x].value.name, "DoubleValue")
-
-        x = "d2"
-        self.assertEqual(typecollection.constants[x].name, x)
-        self.assertEqual(typecollection.constants[x].type.name, "Double")
-        self.assertAlmostEqual(typecollection.constants[x].value.value, 1.0)
-        self.assertEqual(typecollection.constants[x].value.name, "DoubleValue")
-
-        x = "b1"
-        self.assertEqual(typecollection.constants[x].name, x)
-        self.assertEqual(typecollection.constants[x].type.name, "Boolean")
-        self.assertAlmostEqual(typecollection.constants[x].value.value, True)
-        self.assertEqual(typecollection.constants[x].value.name, "BooleanValue")
-
-        x = "b2"
-        self.assertEqual(typecollection.constants[x].name, x)
-        self.assertEqual(typecollection.constants[x].type.name, "Boolean")
-        self.assertAlmostEqual(typecollection.constants[x].value.value, True)
-        self.assertEqual(typecollection.constants[x].value.name, "BooleanValue")
-
-        x = "b3"
-        self.assertEqual(typecollection.constants[x].name, x)
-        self.assertEqual(typecollection.constants[x].type.name, "Boolean")
-        self.assertAlmostEqual(typecollection.constants[x].value.value, False)
-        self.assertEqual(typecollection.constants[x].value.name, "BooleanValue")
-
-        x = "b4"
-        self.assertEqual(typecollection.constants[x].name, x)
-        self.assertEqual(typecollection.constants[x].type.name, "Boolean")
-        self.assertAlmostEqual(typecollection.constants[x].value.value, True)
-        self.assertEqual(typecollection.constants[x].value.name, "BooleanValue")
-
-        x = "s1"
-        self.assertEqual(typecollection.constants[x].name, x)
-        self.assertEqual(typecollection.constants[x].type.name, "String")
-        self.assertAlmostEqual(typecollection.constants[x].value.value, "123")
-        self.assertEqual(typecollection.constants[x].value.name, "StringValue")
-
-        x = "s2"
-        self.assertEqual(typecollection.constants[x].name, x)
-        self.assertEqual(typecollection.constants[x].type.name, "String")
-        self.assertAlmostEqual(typecollection.constants[x].value.value, "123.0")
-        self.assertEqual(typecollection.constants[x].value.name, "StringValue")
-
-        x = "s3"
-        self.assertEqual(typecollection.constants[x].name, x)
-        self.assertEqual(typecollection.constants[x].type.name, "String")
-        self.assertAlmostEqual(typecollection.constants[x].value.value, "0.0")
-        self.assertEqual(typecollection.constants[x].value.name, "StringValue")
-
-        x = "s4"
-        self.assertEqual(typecollection.constants[x].name, x)
-        self.assertEqual(typecollection.constants[x].type.name, "String")
-        self.assertAlmostEqual(typecollection.constants[x].value.value, "True")
-        self.assertEqual(typecollection.constants[x].value.name, "StringValue")
+        self.assertEqual(typecollection.constants["s2"].expression.name, "String")
 
     def test_constants_bad_syntax_Uint32(self):
         """Franca 0.9.2, section 5.2.1"""
@@ -1356,7 +1246,7 @@ class TestConstants(BaseTestCase):
             }
         """)
         self.assertEqual(str(context.exception),
-                         "Syntax error at line 4 near 'Hello'.")
+                         "There is no implicit conversion from Integer to String")
 
     def test_constants_bad_syntax_String(self):
         """Franca 0.9.2, section 5.2.1"""
@@ -1395,7 +1285,7 @@ class TestConstants(BaseTestCase):
             }
         """)
         self.assertEqual(str(context.exception),
-                         "Syntax error at line 4 near 'double'.")
+                         "Unknown value type: double")
 
     def test_constants_bad_syntax_hexvalue(self):
         """Franca 0.9.2, section 5.2.1"""

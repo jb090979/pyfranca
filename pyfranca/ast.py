@@ -344,32 +344,50 @@ class IntegerValue(Value):
     HEXADECIMAL = 16
 
     def __init__(self, value, base=DECIMAL):
-        super(IntegerValue, self).__init__(value)
+        if -(2**7-1) <= value <= 2**7-1:
+            value_type = "Int8"
+        elif 0 <= value <= 2**8-1:
+            value_type = "UInt8"
+        elif -(2 ** 15 - 1) <= value <= 2 ** 15 - 1:
+            value_type = "Int16"
+        elif 0 <= value <= 2 ** 16 - 1:
+            value_type = "UInt16"
+        elif -(2 ** 31 - 1) <= value <= 2 ** 31 - 1:
+            value_type = "Int32"
+        elif 0 <= value <= 2 ** 32 - 1:
+            value_type = "UInt32"
+        elif -(2 ** 63 - 1) <= value <= 2 ** 63 - 1:
+            value_type = "Int64"
+        elif 0 <= value <= 2 ** 64 - 1:
+            value_type = "UInt64"
+        else:
+            raise ASTException("Value {} out of integer limits!".format(value))
+        super(IntegerValue, self).__init__(value, value_type)
         self.base = base
 
 
 class BooleanValue(Value):
 
     def __init__(self, value):
-        super(BooleanValue, self).__init__(value)
+        super(BooleanValue, self).__init__(value, "Boolean")
 
 
 class FloatValue(Value):
 
     def __init__(self, value):
-        super(FloatValue, self).__init__(value)
+        super(FloatValue, self).__init__(value, "Float")
 
 
 class DoubleValue(Value):
 
     def __init__(self, value):
-        super(DoubleValue, self).__init__(value)
+        super(DoubleValue, self).__init__(value, "Double")
 
 
 class StringValue(Value):
 
     def __init__(self, value):
-        super(StringValue, self).__init__(value)
+        super(StringValue, self).__init__(value, "String")
 
 
 class Enumeration(ComplexType):
@@ -385,10 +403,11 @@ class Enumeration(ComplexType):
 
 class Enumerator(object):
 
-    def __init__(self, name, value=None, comments=None):
+    def __init__(self, name, value=None, comments=None, element_expression=None):
         self.name = name
         self.value = value
         self.comments = comments if comments else OrderedDict()
+        self.expression = element_expression
 
 
 class Struct(ComplexType):
@@ -453,7 +472,7 @@ class Constant(ComplexType):
         self.name = name
         self.type = element_type
         self.value = element_value    # value from solved expression
-        self.expression = element_expression  # None if value is not a expression, just of simple type
+        self.expression = element_expression
 
 
 class Reference(Type):
