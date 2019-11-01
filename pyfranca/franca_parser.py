@@ -44,6 +44,10 @@ class Parser(object):
     """
     Franca IDL PLY parser.
     """
+    real_types = ["Float", "Double"]
+    special_types = ["String", "ByteBuffer"]
+    integer_types = ["Int8", "UInt8", "Int16", "UInt16", "Int32", "UInt32", "Int64", "UInt64"]
+    builtin_types = real_types + special_types + integer_types
 
     @staticmethod
     def _package_def(members):
@@ -64,21 +68,19 @@ class Parser(object):
 
     @staticmethod
     def get_result_type(type1, type2):
-        real_types = ["FloatValue", "DoubleValue"]
-        special_types = ["StringValue", "ByteBuffer"]
-        integer_val = ["Int8", "UInt8", "Int16", "UInt16", "Int32", "UInt32",  "Int64", "UInt64"]
-
         result_type = type1
 
-        if type1 in integer_val and type2 in integer_val:
+        if type1 is None or type2 is None:
+            result_type = None
+        elif type1 in Parser.integer_types and type2 in Parser.integer_types:
             'cast to integer with higher rank'
-            index1 = integer_val.index(type1)
-            index2 = integer_val.index(type2)
+            index1 = Parser.integer_types.index(type1)
+            index2 = Parser.integer_types.index(type2)
             if index1 < index2:
                 result_type = index2
             elif index2 > index1:
                 result_type = index1
-        elif type1 in integer_val and type2 not in integer_val:
+        elif type1 in Parser.integer_types and type2 not in Parser.integer_types:
             raise ParserException("There is no implicit conversion from Integer to {}".format(type2))
         elif type1 == "Float" and type2 != "Float":
             raise ParserException("There is no implicit conversion from Float to {}".format(type2))
@@ -182,8 +184,7 @@ class Parser(object):
     @staticmethod
     def p_fqn_1(p):
         """
-        fqn : ID '.' fqn
-            | ID '.' ID
+        fqn : fqn '.' ID
         """
         p[0] = "{}.{}".format(p[1], p[3])
 
@@ -197,17 +198,9 @@ class Parser(object):
 
     # noinspection PyIncorrectDocstring
     @staticmethod
-    def p_fqn_3(p):
-        """
-        fqn : MULTIPLICATION_OPERATOR
-        """
-        p[0] = p[1]
-
-    # noinspection PyIncorrectDocstring
-    @staticmethod
     def p_import_def_1(p):
         """
-        def : IMPORT ID '.' MULTIPLICATION_OPERATOR FROM STRING_VAL
+        def : IMPORT fqn '.' MULTIPLICATION_OPERATOR FROM STRING_VAL
         """
         fqn = p[2]+p[3]+p[4]
         p[0] = ast.Import(file_name=p[6], namespace=fqn)
@@ -224,7 +217,16 @@ class Parser(object):
     @staticmethod
     def p_import_def_3(p):
         """
-        def : IMPORT ID FROM STRING_VAL
+        def : IMPORT MULTIPLICATION_OPERATOR FROM STRING_VAL
+        """
+        fqn = p[2]
+        p[0] = ast.Import(file_name=p[4], namespace=fqn)
+
+    # noinspection PyIncorrectDocstring
+    @staticmethod
+    def p_import_def_4(p):
+        """
+        def : IMPORT fqn FROM STRING_VAL
         """
         p[0] = ast.Import(file_name=p[4], namespace=p[2])
 
@@ -606,8 +608,8 @@ class Parser(object):
         enumerator : structured_comment ID '=' integer_val
                    | structured_comment ID '=' term
         """
-        if isinstance(p[4], ast.Operator):
-            if p[4].name != "IntegerValue":
+        if isinstance(p[4], ast.Term):
+            if p[4].name is not None and p[4].name not in Parser.integer_types:
                 raise  ParserException("Enumerator have to be of type Integer. But expression is of type: '{}'.".format(p[4].name))
         p[0] = ast.Enumerator(name=p[2], element_expression=p[4], comments=p[1])
 
@@ -740,31 +742,32 @@ class Parser(object):
     def p_constant_def(p):
         """
         constant_def : structured_comment CONST type ID '=' term
-                     | structured_comment CONST type ID '=' value
         """
-        integer_val = ["Int8", "Int16", "Int32", "Int64", "UInt8", "UInt16", "UInt32", "UInt64"]
         const_type = getattr(ast, p[3].name, None)
-        term_type = getattr(ast, p[6].name, None)
-
         if not const_type:
             raise ParserException("Unknown value type: {}".format(p[3].name))
-        elif not term_type:
-            raise ParserException("Unknown value type: {}".format(p[6].name))
-        elif p[3].name != Parser.get_result_type(p[3].name, p[6].name):
-            raise ParserException("An expression of type {} cannot be assign to type {}".format(p[6].name, p[3].name))
-        else:
-            p[0] = ast.Constant(name=p[4],
-                                element_type=const_type(),
-                                element_value=None,
-                                comments=p[1],
-                                element_expression=p[6])
+
+        if p[6].name is not None:
+            term_type = getattr(ast, p[6].name, None)
+            if not term_type:
+                raise ParserException("Unknown value type: {}".format(p[6].name))
+
+        p[0] = ast.Constant(name=p[4],
+                            element_type=const_type(),
+                            element_value=None,
+                            comments=p[1],
+                            element_expression=p[6])
+
+    precedence = (
+        ('left', 'ADDITION_OPERATOR', 'SUBTRACTION_OPERATOR'),
+        ('left', 'MULTIPLICATION_OPERATOR', 'DIVISION_OPERATOR'),
+    )
 
     # noinspection PyIncorrectDocstring
     @staticmethod
     def p_term_1(p):
         """
-        term : '(' value ')'
-             | '(' term ')'
+        term :  '(' term ')'
         """
         p[0] = ast.ParentExpression(term=p[2], value_type=p[2].name)
 
@@ -772,38 +775,67 @@ class Parser(object):
     @staticmethod
     def p_term2_(p):
         """
-        term : value arithmetic_operator term
-             | term arithmetic_operator term
-             | term arithmetic_operator value
-             | value arithmetic_operator value
+        term : term arithmetic_operator term
         """
-
         prio_operators = ["*", "/"]
 
-        if isinstance(p[3], ast.Operator) and p[2] in prio_operators and p[3].operator not in prio_operators:
-            type_name = Parser.get_result_type(p[1].name, p[3].operand1.name)
-            op_tmp = ast.Operator(operator=p[2], value_type=type_name, operand1=p[1], operand2=p[3].operand1)
+        if isinstance(p[1], ast.Term) and not isinstance(p[3], ast.Term):
+            if p[2] in prio_operators and p[1].operator not in prio_operators:
+                type_name = Parser.get_result_type(p[3].name, p[1].operand1.name)
+                op_tmp = ast.Term(operator=p[2], value_type=type_name, operand1=p[1].operand2, operand2=p[3])
 
-            type_name = Parser.get_result_type(op_tmp.name, p[3].operand2.name)
-            p[0] = ast.Operator(operator=p[3].operator, value_type=type_name, operand1=op_tmp,
-                                operand2=p[3].operand2)
+                type_name = Parser.get_result_type(op_tmp.name, p[1].operand1.name)
+                p[0] = ast.Term(operator=p[1].operator, value_type=type_name, operand1=p[1].operand1, operand2=op_tmp)
+            else:
+                type_name = Parser.get_result_type(p[1].name, p[3].name)
+                p[0] = ast.Term(operator=p[2], value_type=type_name, operand1=p[1], operand2=p[3])
+        elif isinstance(p[3], ast.Term) and not isinstance(p[1], ast.Term):
+            if p[2] in prio_operators and p[3].operator not in prio_operators:
+                type_name = Parser.get_result_type(p[1].name, p[3].operand1.name)
+                op_tmp = ast.Term(operator=p[2], value_type=type_name, operand1=p[1], operand2=p[3].operand1)
+
+                type_name = Parser.get_result_type(op_tmp.name, p[3].operand2.name)
+                p[0] = ast.Term(operator=p[3].operator, value_type=type_name, operand1=op_tmp, operand2=p[3].operand2)
+            else:
+                type_name = Parser.get_result_type(p[1].name, p[3].name)
+                p[0] = ast.Term(operator=p[2], value_type=type_name, operand1=p[1], operand2=p[3])
         else:
             type_name = Parser.get_result_type(p[1].name, p[3].name)
-            p[0] = ast.Operator(operator=p[2], value_type=type_name, operand1=p[1], operand2=p[3])
+            p[0] = ast.Term(operator=p[2], value_type=type_name, operand1=p[1], operand2=p[3])
 
     # noinspection PyIncorrectDocstring
     @staticmethod
     def p_term_3(p):
         """
         term : term  value
-             | value value
         """
-        if p[2].value < 0:
+        tmp_value = p[2].value
+        if tmp_value < 0:
             tmp_operator = "-"
             p[2].value = abs(p[2].value)
         else:
             tmp_operator = "+"
-        p[0] = ast.Operator(operator=tmp_operator, value_type=p[2].name, operand1=p[1], operand2=p[2])
+        p[0] = ast.Term(operator=tmp_operator, value_type=p[2].name, operand1=p[1], operand2=p[2])
+
+    # noinspection PyIncorrectDocstring
+    @staticmethod
+    def p_term_4(p):
+        """
+        term : value
+             | term
+        """
+        p[0] = p[1]
+
+    # noinspection PyIncorrectDocstring
+    @staticmethod
+    def p_term_5(p):
+        """
+        term : fqn
+        """
+        p[0] = ast.ValueReference(name=p[1])
+
+
+
 
     # noinspection PyIncorrectDocstring
     @staticmethod
@@ -973,26 +1005,28 @@ class Parser(object):
             kwargs["write_tables"] = False
         self._parser = yacc.yacc(module=self, **kwargs)
 
-    def parse(self, fidl):
+    def parse(self, fidl, debug=0):
         """
         Parse input text
 
         :param fidl: Input text to parse.
+        :param debug: activate debug logging
         :return: AST representation of the input.
         """
-        package = self._parser.parse(fidl)
+        package = self._parser.parse(fidl, debug)
         return package
 
-    def parse_file(self, fspec):
+    def parse_file(self, fspec, debug=0):
         """
         Parse input file
 
         :param fspec: Specification of a fidl to parse.
+        :param debug: activate debug logging
         :return: AST representation of the input.
         """
         with open(fspec, "r") as f:
             fidl = f.read()
-        package = self.parse(fidl)
+        package = self.parse(fidl, debug)
         if package:
             package.files = [fspec]
         return package

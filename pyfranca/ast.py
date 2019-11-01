@@ -317,12 +317,13 @@ class Value(Type):
         self.value = value
 
 
-class Operator(Value):
+class Term(Value):
 
     _metaclass__ = ABCMeta
 
     def __init__(self, operator, value_type, operand1, operand2):
-        super(Operator, self).__init__(value=None, value_type=value_type)
+        super(Term, self).__init__(value=None, value_type=value_type)
+        self.name = value_type
         self.operand1 = operand1
         self.operand2 = operand2
         self.operator = operator
@@ -480,6 +481,15 @@ class Reference(Type):
     def __init__(self, name):
         super(Reference, self).__init__()
         self.name = name
+        self.reference = None
+
+
+class ValueReference(Value):
+
+    def __init__(self, name, value=None):
+        super(ValueReference, self).__init__(value)
+        self.reference_name = name
+        self.name = None
         self.reference = None
 
 
