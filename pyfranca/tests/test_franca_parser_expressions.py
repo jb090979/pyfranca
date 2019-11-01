@@ -488,7 +488,8 @@ class TestExpressionInteger(BaseTestCase):
                             { 
                                 VALUE_1 = 100 
                                 VALUE_2 = 100+1 
-                                VALUE_3 = 30*30-23
+                                VALUE_3 = 30*31-23
+                                VALUE_4 
                             }
 
                            }
@@ -496,4 +497,36 @@ class TestExpressionInteger(BaseTestCase):
 
         self.assertEqual(package.name, "P")
         self.assertEqual(len(package.typecollections), 1)
+        enum = package.typecollections["TC"].enumerations["e1"]
+
+        enumerator = enum.enumerators["VALUE_1"]
+        self.assertEqual(isinstance(enumerator.expression, ast.Value), True)
+        self.assertEqual(enumerator.expression.value, 100)
+        self.assertEqual(enumerator.expression.name, "Int8")
+        self.assertEqual(enumerator.name, "VALUE_1")
+
+        enumerator = enum.enumerators["VALUE_2"]
+        self.assertEqual(isinstance(enumerator.expression, ast.Term), True)
+        self.assertEqual(enumerator.expression.value, None)
+        self.assertEqual(enumerator.expression.operand1.value, 100)
+        self.assertEqual(enumerator.expression.operand2.value, 1)
+        self.assertEqual(enumerator.expression.operator, "+")
+        self.assertEqual(enumerator.expression.name, "Int8")
+        self.assertEqual(enumerator.name, "VALUE_2")
+
+        enumerator = enum.enumerators["VALUE_3"]
+        self.assertEqual(isinstance(enumerator.expression, ast.Term), True)
+        self.assertEqual(enumerator.expression.value, None)
+        self.assertEqual(isinstance(enumerator.expression.operand1, ast.Term), True)
+        self.assertEqual(enumerator.expression.operand1.operand1.value, 30)
+        self.assertEqual(enumerator.expression.operand1.operand2.value, 31)
+        self.assertEqual(enumerator.expression.operand1.operator, "*")
+        self.assertEqual(enumerator.expression.operand2.value, 23)
+        self.assertEqual(enumerator.expression.operator, "-")
+        self.assertEqual(enumerator.expression.name, "Int8")
+        self.assertEqual(enumerator.name, "VALUE_3")
+
+        enumerator = enum.enumerators["VALUE_4"]
+        self.assertEqual(enumerator.expression, None)
+        self.assertEqual(enumerator.name, "VALUE_4")
 
