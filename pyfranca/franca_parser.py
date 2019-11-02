@@ -786,6 +786,9 @@ class Parser(object):
         """
         prio_operators = ["*", "/"]
 
+        # usually the precedence feature take care of operator prority. But in case of p_arithmetic_term_3
+        # it doesn't work. In case of 3+4*5 the parser will determine (3+4)*5. The problem is that +4 is tokenized as
+        # integer 4
         if isinstance(p[1], ast.Term) and p[2] in prio_operators and p[1].operator not in prio_operators:
             type_name = Parser.get_result_type(p[3].name, p[1].operand1.name)
             op_tmp = ast.Term(operator=p[2], value_type=type_name, operand1=p[1].operand2, operand2=p[3])

@@ -941,9 +941,11 @@ class TestExpressions(BaseTestCase):
         fspec = self.tmp_fidl("test.fidl", """
             package P
             typeCollection TC {
-                const Int32 c1 = ((3+a)*z/u)*5
+                const UInt32 u3 = (( 3+ 4*5 ) / 3 * (5+-3))
             }
         """)
         self.processor.import_file(fspec)
-        result = self.processor.print_constant(self.processor.packages["P"].typecollections["TC"].constants["c1"])
+        result = self.processor.print_constant(self.processor.packages["P"].typecollections["TC"].constants["u3"])
+
+        self.assertEqual(result, "u3 = ( ( 3 + 4 * 5 ) / 3 * ( 5 + -3 ) )")
         print("Stop here for debugging!")
