@@ -277,9 +277,9 @@ class TestCheckRegularExpressions(BaseTestCase):
         self.check("ID", 'abc')
         self.check("=", '=')
         self.check("INTEGER_VAL", 3)
-        self.check("ADDITION_OPERATOR", "+")
+        self.check("PLUS", "+")
         self.check("INTEGER_VAL", 5)
-        self.check("MULTIPLICATION_OPERATOR", "*")
+        self.check("TIMES", "*")
         self.check("INTEGER_VAL", 5)
 
     def test_type_add_expression(self):
@@ -290,7 +290,7 @@ class TestCheckRegularExpressions(BaseTestCase):
         self.check("ID", 'abc')
         self.check("=", '=')
         self.check("INTEGER_VAL", 5)
-        self.check("ADDITION_OPERATOR", "+")
+        self.check("PLUS", "+")
         self.check("INTEGER_VAL", 5)
 
     def test_type_diff_expression(self):
@@ -301,7 +301,7 @@ class TestCheckRegularExpressions(BaseTestCase):
         self.check("ID", 'abc')
         self.check("=", '=')
         self.check("INTEGER_VAL", 5)
-        self.check("SUBTRACTION_OPERATOR", "-")
+        self.check("MINUS", "-")
         self.check("INTEGER_VAL", 5)
 
     def test_type_div_expression(self):
@@ -312,7 +312,7 @@ class TestCheckRegularExpressions(BaseTestCase):
         self.check("ID", 'abc')
         self.check("=", '=')
         self.check("INTEGER_VAL", 5)
-        self.check("DIVISION_OPERATOR", "/")
+        self.check("DIVIDE", "/")
         self.check("INTEGER_VAL", 5)
 
     def test_type_parenthesis_expression(self):
@@ -326,7 +326,7 @@ class TestCheckRegularExpressions(BaseTestCase):
         self.check("INTEGER_VAL", 5)
         self.check("INTEGER_VAL", -5)
         self.check(")")
-        self.check("DIVISION_OPERATOR", "/")
+        self.check("DIVIDE", "/")
         self.check("INTEGER_VAL", 2)
 
     def test_type_bracket_expression_array(self):
@@ -345,7 +345,7 @@ class TestCheckRegularExpressions(BaseTestCase):
         self.check("INTEGER_VAL", 3)
         self.check(",")
         self.check("INTEGER_VAL", 100)
-        self.check("MULTIPLICATION_OPERATOR", "*")
+        self.check("TIMES", "*")
         self.check("INTEGER_VAL", 100)
         self.check("INTEGER_VAL", 100)
         self.check("]")
@@ -380,11 +380,11 @@ class TestCheckRegularExpressions(BaseTestCase):
         self.check("=")
         self.check("[")
         self.check("INTEGER_VAL", 1)
-        self.check("ASSIGN_OPERATOR", "=>")
+        self.check("ASSIGN", "=>")
         self.check("STRING_VAL", "one")
         self.check(",")
         self.check("INTEGER_VAL", 2)
-        self.check("ASSIGN_OPERATOR", "=>")
+        self.check("ASSIGN", "=>")
         self.check("STRING_VAL", "two")
         self.check("]")
 

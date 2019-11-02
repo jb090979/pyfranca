@@ -200,7 +200,7 @@ class Parser(object):
     @staticmethod
     def p_import_def_1(p):
         """
-        def : IMPORT fqn '.' MULTIPLICATION_OPERATOR FROM STRING_VAL
+        def : IMPORT fqn '.' TIMES FROM STRING_VAL
         """
         fqn = p[2]+p[3]+p[4]
         p[0] = ast.Import(file_name=p[6], namespace=fqn)
@@ -217,7 +217,7 @@ class Parser(object):
     @staticmethod
     def p_import_def_3(p):
         """
-        def : IMPORT MULTIPLICATION_OPERATOR FROM STRING_VAL
+        def : IMPORT TIMES FROM STRING_VAL
         """
         fqn = p[2]
         p[0] = ast.Import(file_name=p[4], namespace=fqn)
@@ -606,7 +606,7 @@ class Parser(object):
     def p_enumerator_2(p):
         """
         enumerator : structured_comment ID '=' integer_val
-                   | structured_comment ID '=' term
+                   | structured_comment ID '=' arithmetic_term
         """
         if isinstance(p[4], ast.Term):
             if p[4].name is not None and p[4].name not in Parser.integer_types:
@@ -741,7 +741,9 @@ class Parser(object):
     @staticmethod
     def p_constant_def(p):
         """
-        constant_def : structured_comment CONST type ID '=' term
+        constant_def : structured_comment CONST numeric_type ID '=' arithmetic_term
+                     | structured_comment CONST boolean_type ID '=' boolean_val
+                     | structured_comment CONST string_type ID '=' string_val
         """
         const_type = getattr(ast, p[3].name, None)
         if not const_type:
@@ -758,56 +760,45 @@ class Parser(object):
                             comments=p[1],
                             element_expression=p[6])
 
+    # noinspection PyIncorrectDocstring
+    @staticmethod
+    def p_arithmetic_term_1(p):
+        """
+        arithmetic_term :  '(' arithmetic_term ')'
+        """
+        p[0] = ast.ParentExpression(term=p[2], value_type=p[2].name)
+
     precedence = (
-        ('left', 'ADDITION_OPERATOR', 'SUBTRACTION_OPERATOR'),
-        ('left', 'MULTIPLICATION_OPERATOR', 'DIVISION_OPERATOR'),
+        ('left', 'PLUS', 'MINUS'),
+        ('left', 'TIMES', 'DIVIDE'),
     )
 
     # noinspection PyIncorrectDocstring
     @staticmethod
-    def p_term_1(p):
+    def p_arithmetic_term_2(p):
         """
-        term :  '(' term ')'
-        """
-        p[0] = ast.ParentExpression(term=p[2], value_type=p[2].name)
-
-    # noinspection PyIncorrectDocstring
-    @staticmethod
-    def p_term2_(p):
-        """
-        term : term arithmetic_operator term
+        arithmetic_term : arithmetic_term PLUS arithmetic_term
+                        | arithmetic_term MINUS arithmetic_term
+                        | arithmetic_term TIMES arithmetic_term
+                        | arithmetic_term DIVIDE arithmetic_term
         """
         prio_operators = ["*", "/"]
 
-        if isinstance(p[1], ast.Term) and not isinstance(p[3], ast.Term):
-            if p[2] in prio_operators and p[1].operator not in prio_operators:
-                type_name = Parser.get_result_type(p[3].name, p[1].operand1.name)
-                op_tmp = ast.Term(operator=p[2], value_type=type_name, operand1=p[1].operand2, operand2=p[3])
+        if isinstance(p[1], ast.Term) and p[2] in prio_operators and p[1].operator not in prio_operators:
+            type_name = Parser.get_result_type(p[3].name, p[1].operand1.name)
+            op_tmp = ast.Term(operator=p[2], value_type=type_name, operand1=p[1].operand2, operand2=p[3])
 
-                type_name = Parser.get_result_type(op_tmp.name, p[1].operand1.name)
-                p[0] = ast.Term(operator=p[1].operator, value_type=type_name, operand1=p[1].operand1, operand2=op_tmp)
-            else:
-                type_name = Parser.get_result_type(p[1].name, p[3].name)
-                p[0] = ast.Term(operator=p[2], value_type=type_name, operand1=p[1], operand2=p[3])
-        elif isinstance(p[3], ast.Term) and not isinstance(p[1], ast.Term):
-            if p[2] in prio_operators and p[3].operator not in prio_operators:
-                type_name = Parser.get_result_type(p[1].name, p[3].operand1.name)
-                op_tmp = ast.Term(operator=p[2], value_type=type_name, operand1=p[1], operand2=p[3].operand1)
-
-                type_name = Parser.get_result_type(op_tmp.name, p[3].operand2.name)
-                p[0] = ast.Term(operator=p[3].operator, value_type=type_name, operand1=op_tmp, operand2=p[3].operand2)
-            else:
-                type_name = Parser.get_result_type(p[1].name, p[3].name)
-                p[0] = ast.Term(operator=p[2], value_type=type_name, operand1=p[1], operand2=p[3])
+            type_name = Parser.get_result_type(op_tmp.name, p[1].operand1.name)
+            p[0] = ast.Term(operator=p[1].operator, value_type=type_name, operand1=p[1].operand1, operand2=op_tmp)
         else:
             type_name = Parser.get_result_type(p[1].name, p[3].name)
             p[0] = ast.Term(operator=p[2], value_type=type_name, operand1=p[1], operand2=p[3])
 
     # noinspection PyIncorrectDocstring
     @staticmethod
-    def p_term_3(p):
+    def p_arithmetic_term_3(p):
         """
-        term : term  value
+        arithmetic_term : arithmetic_term  numeric_value
         """
         tmp_value = p[2].value
         if tmp_value < 0:
@@ -819,23 +810,21 @@ class Parser(object):
 
     # noinspection PyIncorrectDocstring
     @staticmethod
-    def p_term_4(p):
+    def p_arithmetic_term_4(p):
         """
-        term : value
-             | term
+        arithmetic_term : numeric_value
+                        | arithmetic_term
         """
+        print("test123 {}".format(p[1].value))
         p[0] = p[1]
 
     # noinspection PyIncorrectDocstring
     @staticmethod
-    def p_term_5(p):
+    def p_arithmetic_term_5(p):
         """
-        term : fqn
+        arithmetic_term : fqn
         """
         p[0] = ast.ValueReference(name=p[1])
-
-
-
 
     # noinspection PyIncorrectDocstring
     @staticmethod
@@ -892,35 +881,71 @@ class Parser(object):
 
     # noinspection PyIncorrectDocstring
     @staticmethod
-    def p_value(p):
+    def p_numeric_value(p):
         """
-        value : boolean_val
-              | string_val
-              | real_val
-              | integer_val
+        numeric_value : real_val
+                      | integer_val
         """
         p[0] = p[1]
 
     # noinspection PyIncorrectDocstring
     @staticmethod
-    def p_type_1(p):
+    def p_numeric_type_1(p):
         """
-        type : INT8
-             | INT16
-             | INT32
-             | INT64
-             | UINT8
-             | UINT16
-             | UINT32
-             | UINT64
-             | BOOLEAN
-             | FLOAT
-             | DOUBLE
-             | STRING
-             | BYTEBUFFER
+        numeric_type : INT8
+                     | INT16
+                     | INT32
+                     | INT64
+                     | UINT8
+                     | UINT16
+                     | UINT32
+                     | UINT64
+                     | FLOAT
+                     | DOUBLE
         """
         type_class = getattr(ast, p[1])
         p[0] = type_class()
+
+    # noinspection PyIncorrectDocstring
+    @staticmethod
+    def p_boolean_type_1(p):
+        """
+        boolean_type : BOOLEAN
+
+        """
+        type_class = getattr(ast, p[1])
+        p[0] = type_class()
+
+    # noinspection PyIncorrectDocstring
+    @staticmethod
+    def p_string_type_1(p):
+        """
+        string_type : STRING
+
+        """
+        type_class = getattr(ast, p[1])
+        p[0] = type_class()
+
+    # noinspection PyIncorrectDocstring
+    @staticmethod
+    def p_byte_buffer_type_1(p):
+        """
+        byte_buffer_type : BYTEBUFFER
+
+        """
+        type_class = getattr(ast, p[1])
+        p[0] = type_class()
+
+    # noinspection PyIncorrectDocstring
+    @staticmethod
+    def p_type_1(p):
+        """
+        type : numeric_type
+             | boolean_type
+             | string_type
+             | byte_buffer_type
+        """
+        p[0] = p[1]
 
     # noinspection PyIncorrectDocstring
     @staticmethod
@@ -959,17 +984,6 @@ class Parser(object):
         """
         element_type = ast.Reference(name=p[1])
         p[0] = ast.Array(name=None, element_type=element_type)
-
-    # noinspection PyIncorrectDocstring
-    @staticmethod
-    def p_arithmetic_operator(p):
-        """
-        arithmetic_operator : ADDITION_OPERATOR
-                            | SUBTRACTION_OPERATOR
-                            | MULTIPLICATION_OPERATOR
-                            | DIVISION_OPERATOR
-        """
-        p[0] = p[1]
 
     # noinspection PyUnusedLocal, PyIncorrectDocstring
     @staticmethod

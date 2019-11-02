@@ -442,6 +442,7 @@ class TestUnsupported(BaseTestCase):
         self.assertEqual(str(context.exception),
                          "Syntax error at line 5 near '>'.")
 
+    @unittest.skip("wil be implemented soon")
     def test_complex_constants(self):
         """Franca 0.9.2, section 5.2.2"""
         with self.assertRaises(ParserException) as context:

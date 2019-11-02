@@ -73,15 +73,15 @@ class TestExpressionInteger(BaseTestCase):
 
         constant = package.typecollections["TC"].constants["u1"]
         self.assertEqual(isinstance(constant.expression, ast.Term), True)
-        self.assertEqual(constant.expression.operand1.value, 3)
+        self.assertEqual(isinstance(constant.expression.operand1, ast.Term), True)
+        self.assertEqual(constant.expression.operand1.operand1.value, 3)
+        self.assertEqual(constant.expression.operand1.operator, "+")
+        self.assertEqual(isinstance(constant.expression.operand1.operand2, ast.Term), True)
+        self.assertEqual(constant.expression.operand1.operand2.operand1.value, 5)
+        self.assertEqual(constant.expression.operand1.operand2.operator, "*")
+        self.assertEqual(constant.expression.operand1.operand2.operand2.value, 4)
         self.assertEqual(constant.expression.operator, "+")
-        self.assertEqual(isinstance(constant.expression.operand2, ast.Term), True)
-        self.assertEqual(isinstance(constant.expression.operand2.operand1, ast.Term), True)
-        self.assertEqual(constant.expression.operand2.operand1.operand1.value, 5)
-        self.assertEqual(constant.expression.operand2.operand1.operator, "*")
-        self.assertEqual(constant.expression.operand2.operand1.operand2.value, 4)
-        self.assertEqual(constant.expression.operand2.operand2.value, 5)
-        self.assertEqual(constant.expression.operand2.operator, "+")
+        self.assertEqual(constant.expression.operand2.value, 5)
 
         constant = package.typecollections["TC"].constants["u2"]
         self.assertEqual(isinstance(constant.expression, ast.Term), True)
@@ -158,15 +158,15 @@ class TestExpressionInteger(BaseTestCase):
 
         constant = package.typecollections["TC"].constants["u1"]
         self.assertEqual(isinstance(constant.expression, ast.Term), True)
-        self.assertEqual(constant.expression.operand1.value, 3.0)
+        self.assertEqual(isinstance(constant.expression.operand1, ast.Term), True)
+        self.assertEqual(constant.expression.operand1.operand1.value, 3.0)
+        self.assertEqual(constant.expression.operand1.operator, "+")
+        self.assertEqual(isinstance(constant.expression.operand1.operand2, ast.Term), True)
+        self.assertEqual(constant.expression.operand1.operand2.operand1.value, 5.0)
+        self.assertEqual(constant.expression.operand1.operand2.operator, "*")
+        self.assertEqual(constant.expression.operand1.operand2.operand2.value, 4.0)
         self.assertEqual(constant.expression.operator, "+")
-        self.assertEqual(isinstance(constant.expression.operand2, ast.Term), True)
-        self.assertEqual(isinstance(constant.expression.operand2.operand1, ast.Term), True)
-        self.assertEqual(constant.expression.operand2.operand1.operand1.value, 5.0)
-        self.assertEqual(constant.expression.operand2.operand1.operator, "*")
-        self.assertEqual(constant.expression.operand2.operand1.operand2.value, 4.0)
-        self.assertEqual(constant.expression.operand2.operand2.value, 6.0)
-        self.assertEqual(constant.expression.operand2.operator, "+")
+        self.assertEqual(constant.expression.operand2.value, 6.0)
 
         constant = package.typecollections["TC"].constants["u2"]
         self.assertEqual(isinstance(constant.expression, ast.Term), True)
@@ -242,21 +242,20 @@ class TestExpressionInteger(BaseTestCase):
         self.assertEqual(constant.expression.operand1.name, "Int8")
         self.assertEqual(isinstance(constant.expression.operand1.term, ast.Term), True)
         self.assertEqual(constant.expression.operand1.term.operator, "+")
-        self.assertEqual(constant.expression.operand1.term.operand1.value, 3.0)
-        self.assertEqual(constant.expression.operand1.term.operand2.value, 5.0)
+        self.assertEqual(constant.expression.operand1.term.operand1.value, 3)
+        self.assertEqual(constant.expression.operand1.term.operand2.value, 5)
 
         constant = package.typecollections["TC"].constants["u2"]
         self.assertEqual(isinstance(constant.expression, ast.Term), True)
-        self.assertEqual(constant.expression.operand1.value, 3.0)
+        self.assertEqual(isinstance(constant.expression.operand1, ast.Term), True)
+        self.assertEqual(constant.expression.operand1.operand1.value, 3)
+        self.assertEqual(constant.expression.operand1.operator, "+")
+        self.assertEqual(isinstance(constant.expression.operand1.operand2, ast.ParentExpression), True)
+        self.assertEqual(constant.expression.operand1.operand2.term.operand1.value, 5)
+        self.assertEqual(constant.expression.operand1.operand2.term.operator, "*")
+        self.assertEqual(constant.expression.operand1.operand2.term.operand2.value, 4)
         self.assertEqual(constant.expression.operator, "+")
-        self.assertEqual(isinstance(constant.expression.operand2, ast.Term), True)
-        self.assertEqual(isinstance(constant.expression.operand2.operand1, ast.ParentExpression), True)
-        self.assertEqual(isinstance(constant.expression.operand2.operand1.term, ast.Term), True)
-        self.assertEqual(constant.expression.operand2.operand1.term.operand1.value, 5.0)
-        self.assertEqual(constant.expression.operand2.operand1.term.operator, "*")
-        self.assertEqual(constant.expression.operand2.operand1.term.operand2.value, 4.0)
-        self.assertEqual(constant.expression.operand2.operand2.value, 6.0)
-        self.assertEqual(constant.expression.operand2.operator, "+")
+        self.assertEqual(constant.expression.operand2.value, 6)
 
         'checking complex numeric expression'
         constant = package.typecollections["TC"].constants["u3"]
@@ -264,31 +263,29 @@ class TestExpressionInteger(BaseTestCase):
         self.assertEqual(isinstance(constant.expression.term, ast.Term), True)
 
         'Level 1'
-        self.assertEqual(isinstance(constant.expression.term.operand1, ast.ParentExpression), True)
-        self.assertEqual(constant.expression.term.operator, "/")
-        self.assertEqual(isinstance(constant.expression.term.operand2, ast.Term), True)
+        self.assertEqual(isinstance(constant.expression.term.operand1, ast.Term), True)
+        self.assertEqual(constant.expression.term.operator, "*")
+        self.assertEqual(isinstance(constant.expression.term.operand2, ast.ParentExpression), True)
 
         'Level2 Operand 1'
-        self.assertEqual(isinstance(constant.expression.term.operand1.term, ast.Term), True)
-        self.assertEqual(constant.expression.term.operand1.term.operand1.value, 3)
-        self.assertEqual(constant.expression.term.operand1.term.operator, "+")
-        self.assertEqual(isinstance(constant.expression.term.operand1.term.operand2, ast.Term), True)
+        self.assertEqual(isinstance(constant.expression.term.operand1.operand1, ast.ParentExpression), True)
+        self.assertEqual(constant.expression.term.operand1.operator, "/")
+        self.assertEqual(isinstance(constant.expression.term.operand1.operand2, ast.Value), True)
+        self.assertEqual(constant.expression.term.operand1.operand2.value, 3)
 
         'Level3 Operand 1.2'
-        self.assertEqual(constant.expression.term.operand1.term.operand2.operand1.value, 4)
-        self.assertEqual(constant.expression.term.operand1.term.operand2.operator, "*")
-        self.assertEqual(constant.expression.term.operand1.term.operand2.operand2.value, 5)
+        self.assertEqual(isinstance(constant.expression.term.operand1.operand1.term, ast.Term), True)
+        self.assertEqual(isinstance(constant.expression.term.operand1.operand1.term.operand1, ast.Value), True)
+        self.assertEqual(constant.expression.term.operand1.operand1.term.operand1.value, 3)
+        self.assertEqual(constant.expression.term.operand1.operand2.value, 3)
+        self.assertEqual(isinstance(constant.expression.term.operand1.operand1.term.operand2, ast.Term), True)
+
 
         'Level2 Operand 2'
-        self.assertEqual(constant.expression.term.operand2.operand1.value, 3)
-        self.assertEqual(constant.expression.term.operand2.operator, "*")
-        self.assertEqual(isinstance(constant.expression.term.operand2.operand2, ast.ParentExpression), True)
-        self.assertEqual(isinstance(constant.expression.term.operand2.operand2.term, ast.Term), True)
-
-        'Level3 Operand 2.2'
-        self.assertEqual(constant.expression.term.operand2.operand2.term.operand1.value, 5)
-        self.assertEqual(constant.expression.term.operand2.operand2.term.operator, "+")
-        self.assertEqual(constant.expression.term.operand2.operand2.term.operand2.value, -3)
+        self.assertEqual(constant.expression.term.operand2.term.operand1.value, 5)
+        self.assertEqual(constant.expression.term.operand2.term.operator, "+")
+        self.assertEqual(isinstance(constant.expression.term.operand2.term.operand2, ast.Value), True)
+        self.assertEqual(constant.expression.term.operand2.term.operand2.value, -3)
 
     def test_expressions_with_references(self):
         """Franca 0.9.2, section 5.2.1"""
@@ -343,15 +340,15 @@ class TestExpressionInteger(BaseTestCase):
 
         constant = package.typecollections["TC"].constants["u3"]
         self.assertEqual(isinstance(constant.expression, ast.Term), True)
-        self.assertEqual(constant.expression.operand1.value, None)
         self.assertEqual(isinstance(constant.expression.operand1, ast.ValueReference), True)
         self.assertEqual(constant.expression.operand1.reference_name, 'x')
-        self.assertEqual(constant.expression.operator, "+")
+        self.assertEqual(constant.expression.operand1.value, None)
         self.assertEqual(isinstance(constant.expression.operand2, ast.Term), True)
-        self.assertEqual(isinstance(constant.expression.operand2.operand1, ast.IntegerValue), True)
+        self.assertEqual(constant.expression.operand2.operator, '*')
+        self.assertEqual(isinstance(constant.expression.operand2.operand1, ast.Value), True)
+        self.assertEqual(isinstance(constant.expression.operand2.operand2, ast.ValueReference), True)
         self.assertEqual(constant.expression.operand2.operand1.value, 4)
         self.assertEqual(constant.expression.operand2.operator, "*")
-        self.assertEqual(isinstance(constant.expression.operand2.operand2, ast.ValueReference), True)
         self.assertEqual(constant.expression.operand2.operand2.value, None)
         self.assertEqual(constant.expression.operand2.operand2.reference_name, 'z')
 
@@ -530,3 +527,26 @@ class TestExpressionInteger(BaseTestCase):
         self.assertEqual(enumerator.expression, None)
         self.assertEqual(enumerator.name, "VALUE_4")
 
+    def test_wrong_assignement_bool(self):
+        """Franca 0.9.2, section 5.2.1"""
+        with self.assertRaises(ParserException) as context:
+            self._parse("""
+                package P
+                typeCollection TC {
+                    const UInt32 u1 = true
+                }
+            """)
+        self.assertEqual(str(context.exception),
+                         "Syntax error at line 4 near 'True'.")
+
+    def test_wrong_assignement_string(self):
+        """Franca 0.9.2, section 5.2.1"""
+        with self.assertRaises(ParserException) as context:
+            self._parse("""
+                package P
+                typeCollection TC {
+                    const UInt32 u1 = "true"
+                }
+            """)
+        self.assertEqual(str(context.exception),
+                         "Syntax error at line 4 near 'true'.")
