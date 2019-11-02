@@ -370,6 +370,33 @@ class Processor(object):
             for imported_namespace in imported_package.interfaces.values():
                 self._update_imported_namespaces_references(package, imported_namespace)
 
+    def print_expression(self, expression, ref_string):
+        if isinstance(expression, ast.Term):
+            ref_string = self.print_expression(expression.operand1, ref_string)
+            ref_string += " "
+            ref_string += expression.operator
+            ref_string += " "
+            ref_string = self.print_expression(expression.operand2, ref_string)
+        elif isinstance(expression, ast.ParentExpression):
+            ref_string += "( "
+            ref_string = self.print_expression(expression.term, ref_string)
+            ref_string += " )"
+        elif isinstance(expression, ast.ValueReference):
+            ref_string += str(expression.reference_name)
+        elif isinstance(expression, ast.Value):
+            ref_string += str(expression.value)
+        return ref_string
+
+    def print_constant(self, constant):
+        if isinstance(constant, ast.Constant):
+            ref_string = constant.name + " = "
+            ref_string = self.print_expression(constant.expression,ref_string)
+        else:
+            raise ProcessorException(
+                "print_expression argument is not a ast.Constant type: Type:'{}'".format(
+                   type(constant)))
+        return ref_string
+
     def import_package(self, fspec, package, references=None):
         """
         Import an ast.Package into the processor.

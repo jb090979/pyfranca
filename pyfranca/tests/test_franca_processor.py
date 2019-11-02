@@ -934,3 +934,16 @@ class TestReferences(BaseTestCase):
             self.assertEqual(d2.type.name, "A")
             self.assertEqual(d2.type.reference, a)
 
+class TestExpressions(BaseTestCase):
+    """Test type references."""
+
+    def test_print_expressions(self):
+        fspec = self.tmp_fidl("test.fidl", """
+            package P
+            typeCollection TC {
+                const Int32 c1 = ((3+a)*z/u)*5
+            }
+        """)
+        self.processor.import_file(fspec)
+        result = self.processor.print_constant(self.processor.packages["P"].typecollections["TC"].constants["c1"])
+        print("Stop here for debugging!")

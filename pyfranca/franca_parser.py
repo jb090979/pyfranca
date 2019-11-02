@@ -72,6 +72,8 @@ class Parser(object):
 
         if type1 is None or type2 is None:
             result_type = None
+        elif type1 is "ParentExpression" or type2 is "ParentExpression":
+            result_type = None
         elif type1 in Parser.integer_types and type2 in Parser.integer_types:
             'cast to integer with higher rank'
             index1 = Parser.integer_types.index(type1)
