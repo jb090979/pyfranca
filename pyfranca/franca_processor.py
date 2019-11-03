@@ -371,7 +371,40 @@ class Processor(object):
                 self._update_imported_namespaces_references(package, imported_namespace)
 
     def print_expression(self, expression, ref_string):
-        if isinstance(expression, ast.Term):
+        if isinstance(expression, ast.InitializerExpressionArray):
+            ref_string += "[ "
+            for element in expression.elements:
+                ref_string  = self.print_expression(element, ref_string)
+                ref_string += ", "
+
+            #  remove last ,
+            if len(expression.elements) > 0:
+                ref_string = ref_string[0:-2]
+            ref_string += " ]"
+        elif isinstance(expression, ast.InitializerExpressionMap):
+            ref_string += "[ "
+            for element in expression.elements:
+                ref_string = self.print_expression(element[0], ref_string)
+                ref_string += " => "
+                ref_string = self.print_expression(element[1], ref_string)
+                ref_string += ", "
+            #  remove last ,
+            if len(expression.elements) > 0:
+                ref_string = ref_string[0:-2]
+            ref_string += " ]"
+        elif isinstance(expression, ast.InitializerExpressionStruct):
+            ref_string += "{ "
+            for element in expression.elements.items():
+                ref_string += element[0]
+                ref_string += ": "
+                ref_string = self.print_expression(element[1], ref_string)
+                ref_string += ", "
+
+            #  remove last ,
+            if len(expression.elements.items()) > 0:
+                ref_string = ref_string[0:-2]
+            ref_string += " }"
+        elif isinstance(expression, ast.Term):
             ref_string = self.print_expression(expression.operand1, ref_string)
             ref_string += " "
             ref_string += expression.operator

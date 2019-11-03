@@ -943,10 +943,55 @@ class TestExpressions(BaseTestCase):
             package P
             typeCollection TC {
                 const UInt32 u3 = (( 3+ 4*5 ) / 3 * (5+-3))
+                const Boolean u4 = a+3*b-3 > 23
+                
+                struct Struct1 
+                {
+                    Boolean e1
+                    UInt16 e2
+                    String e3
+                }
+                const Struct1 s1 = { e1: 24>42, e2: 1+2*3, e3: "foo" }
+                
+                union Union1 
+                {
+                    UInt16 e1
+                    Boolean e2
+                    String e3
+                }
+                const Union1 uni1 = { e1: 1 }
+                const Union1 uni2 = { e3: "foo" }
+                
+               array Array1 of UInt16
+               const Array1 empty = []
+               const Array1 one = [ 123 ] 
+               const Array1 full = [ 1, 2, 2+3, 100*100+100 ] 
+               
+               map Map1 { UInt16 to String }
+               const Map1 m1 = [ 1 => "one", 2 => "two" ]
             }
         """)
         self.processor.import_file(fspec)
-        result = self.processor.print_constant(self.processor.packages["P"].typecollections["TC"].constants["u3"])
-
-        self.assertEqual(result, "u3 = ( ( 3 + 4 * 5 ) / 3 * ( 5 + -3 ) )")
+        result_u3 = self.processor.print_constant(self.processor.packages["P"].typecollections["TC"].constants["u3"])
+        result_u4 = self.processor.print_constant(self.processor.packages["P"].typecollections["TC"].constants["u4"])
+        result_uni1 = self.processor.print_constant(self.processor.packages["P"].typecollections["TC"].constants["uni1"])
+        result_uni2 = self.processor.print_constant(self.processor.packages["P"].typecollections["TC"].constants["uni2"])
+        result_s1 = self.processor.print_constant(self.processor.packages["P"].typecollections["TC"].constants["s1"])
+        result_empty = self.processor.print_constant(
+            self.processor.packages["P"].typecollections["TC"].constants["empty"])
+        result_one = self.processor.print_constant(
+            self.processor.packages["P"].typecollections["TC"].constants["one"])
+        result_full = self.processor.print_constant(
+            self.processor.packages["P"].typecollections["TC"].constants["full"])
+        result_m1 = self.processor.print_constant(
+            self.processor.packages["P"].typecollections["TC"].constants["m1"])
+        self.assertEqual(result_u3, "u3 = ( ( 3 + 4 * 5 ) / 3 * ( 5 + -3 ) )")
+        self.assertEqual(result_u4, 'u4 = a + 3 * b - 3 > 23')
+        self.assertEqual(result_uni1, 'uni1 = { e1: 1 }')
+        self.assertEqual(result_uni2, 'uni2 = { e3: foo }')
+        self.assertEqual(result_s1, 's1 = { e1: 24 > 42, e2: 1 + 2 * 3, e3: foo }')
+        self.assertEqual(result_empty, 'empty = [  ]')
+        self.assertEqual(result_one, 'one = [ 123 ]')
+        self.assertEqual(result_full, 'full = [ 1, 2, 2 + 3, 100 * 100 + 100 ]')
+        self.assertEqual(result_m1, 'm1 = [ 1 => one, 2 => two ]')
         print("Stop here for debugging!")
