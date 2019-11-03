@@ -493,9 +493,15 @@ class ValueReference(Value):
         self.reference = None
 
 
-class Collection:
+class InitializerExpressionArray:
 
     def __init__(self, elements=[]):
+        self.elements = elements
+
+
+class InitializerExpressionStruct:
+
+    def __init__(self, elements=OrderedDict()):
         self.elements = elements
 
 

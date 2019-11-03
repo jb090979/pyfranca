@@ -610,7 +610,7 @@ class TestBooleanExpression(BaseTestCase):
 
 
 class TestArrayExpression(BaseTestCase):
-    """Test constant array that are initialized with a list"""
+    """Test constants of type array which are initialized with a list"""
 
     def test_valid_list_expressions(self):
         """Franca 0.9.2, section 5.2.1"""
@@ -628,24 +628,70 @@ class TestArrayExpression(BaseTestCase):
         self.assertEqual(len(package.typecollections), 1)
 
         constant = package.typecollections["TC"].constants["empty"]
-        self.assertEqual(isinstance(constant.expression, ast.Collection), True)
+        self.assertEqual(isinstance(constant.expression, ast.InitializerExpressionArray), True)
         self.assertEqual(len(constant.expression.elements), 0)
 
         constant = package.typecollections["TC"].constants["one"]
-        self.assertEqual(isinstance(constant.expression, ast.Collection), True)
+        self.assertEqual(isinstance(constant.expression, ast.InitializerExpressionArray), True)
         self.assertEqual(len(constant.expression.elements), 1)
         self.assertEqual(isinstance(constant.expression.elements[0], ast.Value), True)
         self.assertEqual(constant.expression.elements[0].value, 123)
 
         constant = package.typecollections["TC"].constants["full"]
-        self.assertEqual(isinstance(constant.expression, ast.Collection), True)
+        self.assertEqual(isinstance(constant.expression, ast.InitializerExpressionArray), True)
         self.assertEqual(len(constant.expression.elements), 4)
         self.assertEqual(isinstance(constant.expression.elements[0], ast.Value), True)
         self.assertEqual(constant.expression.elements[0].value, 1)
         self.assertEqual(isinstance(constant.expression.elements[1], ast.Value), True)
         self.assertEqual(constant.expression.elements[1].value, 2)
-        # i do not check all sub elements of the terms. terms are testded in other test routines. 
+        # i do not check all sub elements of the terms. terms are testded in other test routines.
         self.assertEqual(isinstance(constant.expression.elements[2], ast.Term), True)
         self.assertEqual(constant.expression.elements[2].operator, "+")
         self.assertEqual(isinstance(constant.expression.elements[3], ast.Term), True)
         self.assertEqual(constant.expression.elements[3].operator, "+")
+
+
+class TestStructExpression(BaseTestCase):
+    """Test constant of type struct that are initialized with an expression"""
+
+    def test_valid_struct_expressions(self):
+        """Franca 0.9.2, section 5.2.2"""
+        package =  self._assertParse("""
+            package P
+            typeCollection TC {
+                struct Struct1 
+                {
+                    Boolean e1
+                    UInt16 e2
+                    String e3
+                }
+                const Struct1 s1 = { e1: true, e2: 1, e3: "foo" }
+            }
+        """)
+
+        self.assertEqual(package.name, "P")
+        self.assertEqual(len(package.typecollections), 1)
+        constant = package.typecollections["TC"].constants["s1"]
+        self.assertEqual(isinstance(constant.expression, ast.InitializerExpressionStruct), True)
+        self.assertEqual(constant.expression.elements["e1"].value, True)
+        self.assertEqual(constant.expression.elements["e2"].value, 1)
+        self.assertEqual(constant.expression.elements["e3"].value, "foo")
+
+    def test_duplicated_initializer(self):
+        """Franca 0.9.2, section 5.2.2"""
+
+        with self.assertRaises(ParserException) as context:
+            self._parse("""
+            package P
+            typeCollection TC {
+                struct Struct1 
+                {
+                    Boolean e1
+                    UInt16 e2
+                    String e3
+                }
+                const Struct1 s1 = { e1: true, e1: 1, e3: "foo" }
+            }
+         """)
+        self.assertEqual(str(context.exception),
+                         "Duplicate initializer 'e1'.")

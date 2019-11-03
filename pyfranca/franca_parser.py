@@ -746,7 +746,8 @@ class Parser(object):
         constant_def : structured_comment CONST numeric_type ID '=' arithmetic_term
                      | structured_comment CONST boolean_type ID '=' arithmetic_term
                      | structured_comment CONST string_type ID '=' string_val
-                     | structured_comment CONST fqn_type ID '=' collection
+                     | structured_comment CONST fqn_type ID '=' initializer_expression_array
+                     | structured_comment CONST fqn_type ID '=' initializer_expression_struct
          """
         if isinstance(p[6], ast.Type) and p[6].name is not None:
             term_type = getattr(ast, p[6].name, None)
@@ -761,41 +762,73 @@ class Parser(object):
 
     # noinspection PyIncorrectDocstring
     @staticmethod
-    def p_collection_1(p):
+    def p_initializer_expression_array_1(p):
         """
-        collection :  '[' collection_element ']'
-                   |  "[" "]"
+        initializer_expression_array :  '[' initializer_expression_array_element ']'
+                                     |  "[" "]"
         """
         if len(p) > 3:
             p[0] = p[2]
         else:
-            p[0] = ast.Collection()
+            p[0] = ast.InitializerExpressionArray()
 
     # noinspection PyIncorrectDocstring
     @staticmethod
-    def p_collection_element_1(p):
+    def p_initializer_expression_array_element_1(p):
         """
-        collection_element : arithmetic_term
+        initializer_expression_array_element : arithmetic_term
         """
-        collection = [p[1]]
-        p[0] = ast.Collection(collection)
+        tmp_list = [p[1]]
+        p[0] = ast.InitializerExpressionArray(tmp_list)
 
     # noinspection PyUnusedLocal, PyIncorrectDocstring
     @staticmethod
-    def p_collection_element_2(p):
+    def p_initializer_expression_array_element_2(p):
         """
-        collection_element : empty
+        initializer_expression_array_element : empty
         """
-        p[0] = ast.Collection()
+        p[0] = ast.InitializerExpressionArray()
 
     # noinspection PyIncorrectDocstring
     @staticmethod
-    def p_collection_element_3(p):
+    def p_initializer_expression_array_element_3(p):
         """
-        collection_element :  collection_element "," arithmetic_term
+        initializer_expression_array_element :  initializer_expression_array_element "," arithmetic_term
         """
         p[0] = p[1]
         p[0].elements.append(p[3])
+
+    # noinspection PyIncorrectDocstring
+    @staticmethod
+    def p_initializer_expression_struct(p):
+        """
+        initializer_expression_struct :  '{' initializer_expression_struct_element '}'
+        """
+        p[0] = p[2]
+
+    # noinspection PyIncorrectDocstring
+    @staticmethod
+    def p_initializer_expression_struct_element_1(p):
+        """
+        initializer_expression_struct_element : ID ":" arithmetic_term
+        """
+        tmp_el = OrderedDict()
+        tmp_el[p[1]] = p[3]
+        p[0] = ast.InitializerExpressionStruct(tmp_el)
+
+    # noinspection PyIncorrectDocstring
+    @staticmethod
+    def p_initializer_expression_struct_element_2(p):
+        """
+        initializer_expression_struct_element :  initializer_expression_struct_element "," ID ":" arithmetic_term
+        """
+        p[0] = p[1]
+
+        if p[3] not in p[0].elements:
+            p[0].elements[p[3]] = p[5]
+        else:
+            raise ParserException(
+                "Duplicate initializer '{}'.".format(p[3]))
 
     # noinspection PyIncorrectDocstring
     @staticmethod
