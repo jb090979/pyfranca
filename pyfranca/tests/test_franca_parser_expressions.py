@@ -677,6 +677,29 @@ class TestStructExpression(BaseTestCase):
         self.assertEqual(constant.expression.elements["e2"].value, 1)
         self.assertEqual(constant.expression.elements["e3"].value, "foo")
 
+    def test_valid_struct_expressions_complex(self):
+        """Franca 0.9.2, section 5.2.2"""
+        package =  self._assertParse("""
+            package P
+            typeCollection TC {
+                struct Struct1 
+                {
+                    Boolean e1
+                    UInt16 e2
+                    String e3
+                }
+                const Struct1 s1 = { e1: 24>42, e2: 1+2*3, e3: "foo" }
+            }
+        """)
+
+        self.assertEqual(package.name, "P")
+        self.assertEqual(len(package.typecollections), 1)
+        constant = package.typecollections["TC"].constants["s1"]
+        self.assertEqual(isinstance(constant.expression, ast.InitializerExpressionStruct), True)
+        self.assertEqual(isinstance(constant.expression.elements["e1"], ast.Term), True)
+        self.assertEqual(isinstance(constant.expression.elements["e2"], ast.Term), True)
+        self.assertEqual(constant.expression.elements["e3"].value, "foo")
+
     def test_duplicated_initializer(self):
         """Franca 0.9.2, section 5.2.2"""
 
