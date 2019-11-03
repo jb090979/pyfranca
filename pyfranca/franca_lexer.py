@@ -81,12 +81,15 @@ class Lexer(object):
         "STRING_VAL",
         "BOOLEAN_VAL",
         "STRUCTURED_COMMENT",
-        "BOOLEAN_OPERATOR",
         "PLUS",
         "MINUS",
         "TIMES",
         "DIVIDE",
-        "ASSIGN"
+        "ASSIGN",
+
+        # Operators
+        'LOR', 'LAND', 'LNOT',
+        'LT', 'LE', 'GT', 'GE', 'EQ', 'NE'
     ]
 
     # Ignored characters
@@ -188,13 +191,6 @@ class Lexer(object):
 
     # noinspection PyPep8Naming,PyIncorrectDocstring
     @staticmethod
-    def t_BOOLEAN_OPERATOR(t):
-        # noinspection PySingleQuotedDocstring
-        r"(&&|\|\||>=|<=|<|>|==)"
-        return t
-
-    # noinspection PyPep8Naming,PyIncorrectDocstring
-    @staticmethod
     def t_PLUS(t):
         # noinspection PySingleQuotedDocstring
         r"(\+)"
@@ -227,6 +223,16 @@ class Lexer(object):
         # noinspection PySingleQuotedDocstring
         r"(=>)"
         return t
+
+    t_LOR = r'\|\|'
+    t_LAND = r'&&'
+    t_LNOT = r'!'
+    t_LT = r'<'
+    t_GT = r'>'
+    t_LE = r'<='
+    t_GE = r'>='
+    t_EQ = r'=='
+    t_NE = r'!='
 
     # Identifier
     # noinspection PyPep8Naming,PyIncorrectDocstring

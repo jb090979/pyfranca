@@ -744,7 +744,7 @@ class Parser(object):
     def p_constant_def(p):
         """
         constant_def : structured_comment CONST numeric_type ID '=' arithmetic_term
-                     | structured_comment CONST boolean_type ID '=' boolean_val
+                     | structured_comment CONST boolean_type ID '=' arithmetic_term
                      | structured_comment CONST string_type ID '=' string_val
         """
         const_type = getattr(ast, p[3].name, None)
@@ -771,6 +771,10 @@ class Parser(object):
         p[0] = ast.ParentExpression(term=p[2], value_type=p[2].name)
 
     precedence = (
+        ('left', 'LOR'),
+        ('left', 'LAND'),
+        ('left', 'EQ', 'NE'),
+        ('left', 'GT', 'GE', 'LT', 'LE'),
         ('left', 'PLUS', 'MINUS'),
         ('left', 'TIMES', 'DIVIDE'),
     )
@@ -783,13 +787,23 @@ class Parser(object):
                         | arithmetic_term MINUS arithmetic_term
                         | arithmetic_term TIMES arithmetic_term
                         | arithmetic_term DIVIDE arithmetic_term
+                        | arithmetic_term LNOT arithmetic_term
+                        | arithmetic_term LAND arithmetic_term
+                        | arithmetic_term LOR arithmetic_term
+                        | arithmetic_term LT arithmetic_term
+                        | arithmetic_term GT arithmetic_term
+                        | arithmetic_term NE arithmetic_term
+                        | arithmetic_term GE arithmetic_term
+                        | arithmetic_term LE arithmetic_term
+                        | arithmetic_term EQ arithmetic_term
         """
-        prio_operators = ["*", "/"]
+        hprio_operators = ["*", "/"]
+        lprio_operators = ["+", "-"]
 
         # usually the precedence feature take care of operator prority. But in case of p_arithmetic_term_3
         # it doesn't work. In case of 3+4*5 the parser will determine (3+4)*5. The problem is that +4 is tokenized as
         # integer 4
-        if isinstance(p[1], ast.Term) and p[2] in prio_operators and p[1].operator not in prio_operators:
+        if isinstance(p[1], ast.Term) and p[2] in hprio_operators and p[1].operator in lprio_operators:
             type_name = Parser.get_result_type(p[3].name, p[1].operand1.name)
             op_tmp = ast.Term(operator=p[2], value_type=type_name, operand1=p[1].operand2, operand2=p[3])
 
@@ -819,6 +833,8 @@ class Parser(object):
         """
         arithmetic_term : numeric_value
                         | arithmetic_term
+                        | boolean_val
+                        | string_val
         """
         print("test123 {}".format(p[1].value))
         p[0] = p[1]

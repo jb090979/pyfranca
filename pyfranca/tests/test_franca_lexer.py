@@ -396,7 +396,7 @@ class TestCheckRegularExpressions(BaseTestCase):
         self.check("ID", 'b2')
         self.check("=")
         self.check("ID", 'MAX_COUNT')
-        self.check("BOOLEAN_OPERATOR",">")
+        self.check("GT",">")
         self.check("INTEGER_VAL", 3)
 
     def test_type_boolean_expression(self):
@@ -408,12 +408,12 @@ class TestCheckRegularExpressions(BaseTestCase):
         self.check("=")
         self.check("(")
         self.check("ID", 'a')
-        self.check("BOOLEAN_OPERATOR", "&&")
+        self.check("LAND", "&&")
         self.check("ID", 'b')
         self.check(")")
-        self.check("BOOLEAN_OPERATOR", "||")
+        self.check("LOR", "||")
         self.check("ID", "foo")
-        self.check("BOOLEAN_OPERATOR", "==")
+        self.check("EQ", "==")
         self.check("STRING_VAL", "bar")
 
 

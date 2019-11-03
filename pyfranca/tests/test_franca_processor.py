@@ -934,6 +934,7 @@ class TestReferences(BaseTestCase):
             self.assertEqual(d2.type.name, "A")
             self.assertEqual(d2.type.reference, a)
 
+
 class TestExpressions(BaseTestCase):
     """Test type references."""
 

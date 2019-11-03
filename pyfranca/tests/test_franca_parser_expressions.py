@@ -21,7 +21,7 @@ class BaseTestCase(unittest.TestCase):
         return package
 
 
-class TestExpressionInteger(BaseTestCase):
+class TestNumericExpression(BaseTestCase):
     """Test that unsupported Franca features fail appropriately."""
 
     def test_expressions(self):
@@ -527,26 +527,50 @@ class TestExpressionInteger(BaseTestCase):
         self.assertEqual(enumerator.expression, None)
         self.assertEqual(enumerator.name, "VALUE_4")
 
-    def test_wrong_assignement_bool(self):
-        """Franca 0.9.2, section 5.2.1"""
-        with self.assertRaises(ParserException) as context:
-            self._parse("""
-                package P
-                typeCollection TC {
-                    const UInt32 u1 = true
-                }
-            """)
-        self.assertEqual(str(context.exception),
-                         "Syntax error at line 4 near 'True'.")
 
-    def test_wrong_assignement_string(self):
+class TestBooleanExpression(BaseTestCase):
+    """Test that unsupported Franca features fail appropriately."""
+
+    def test_expressions(self):
         """Franca 0.9.2, section 5.2.1"""
-        with self.assertRaises(ParserException) as context:
-            self._parse("""
-                package P
-                typeCollection TC {
-                    const UInt32 u1 = "true"
-                }
-            """)
-        self.assertEqual(str(context.exception),
-                         "Syntax error at line 4 near 'true'.")
+        package =  self._assertParse("""
+            package P
+            typeCollection TC {
+                const Boolean b1 = true
+                const Boolean b2 = MAX_COUNT > 3
+                const Boolean b3 = (a && b) || (foo=="bar")
+            }
+        """)
+
+        self.assertEqual(package.name, "P")
+        self.assertEqual(len(package.typecollections), 1)
+
+        constant = package.typecollections["TC"].constants["b1"]
+        self.assertEqual(isinstance(constant.expression, ast.Value), True)
+        self.assertEqual(constant.expression.value, True)
+
+        constant = package.typecollections["TC"].constants["b2"]
+        self.assertEqual(isinstance(constant.expression, ast.Term), True)
+        self.assertEqual(isinstance(constant.expression.operand1, ast.ValueReference), True)
+        self.assertEqual(constant.expression.operand1.reference_name, "MAX_COUNT")
+        self.assertEqual(isinstance(constant.expression.operand2, ast.Value), True)
+        self.assertEqual(constant.expression.operand2.value, 3)
+        self.assertEqual(constant.expression.operator, ">")
+
+        constant = package.typecollections["TC"].constants["b3"]
+        self.assertEqual(isinstance(constant.expression, ast.Term), True)
+        self.assertEqual(isinstance(constant.expression.operand1, ast.ParentExpression), True)
+        self.assertEqual(isinstance(constant.expression.operand1.term, ast.Term), True)
+        self.assertEqual(isinstance(constant.expression.operand1.term.operand1, ast.ValueReference), True)
+        self.assertEqual(constant.expression.operand1.term.operand1.reference_name, "a")
+        self.assertEqual(isinstance(constant.expression.operand1.term.operand2, ast.ValueReference), True)
+        self.assertEqual(constant.expression.operand1.term.operand2.reference_name, "b")
+        self.assertEqual(constant.expression.operand1.term.operator, "&&")
+
+        self.assertEqual(isinstance(constant.expression.operand2, ast.ParentExpression), True)
+        self.assertEqual(isinstance(constant.expression.operand2.term, ast.Term), True)
+        self.assertEqual(isinstance(constant.expression.operand2.term.operand1, ast.ValueReference), True)
+        self.assertEqual(constant.expression.operand2.term.operand1.reference_name, "foo")
+        self.assertEqual(isinstance(constant.expression.operand1.term.operand2, ast.Value), True)
+        self.assertEqual(constant.expression.operand2.term.operand2.value, "bar")
+        self.assertEqual(constant.expression.operand2.term.operator, "==")
