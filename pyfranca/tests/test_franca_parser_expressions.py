@@ -766,3 +766,35 @@ class TestMapExpression(BaseTestCase):
         self.assertEqual(isinstance(constant.expression.elements[0][1], ast.Term), True)
         self.assertEqual(isinstance(constant.expression.elements[1][0], ast.Term), True)
         self.assertEqual(isinstance(constant.expression.elements[1][1], ast.Term), True)
+
+
+class TestUnionExpression(BaseTestCase):
+    """Test constant of type struct that are initialized with an expression"""
+
+    def test_valid_map_expressions(self):
+        """Franca 0.9.2, section 5.2.2"""
+        package =  self._assertParse("""
+            package P
+            typeCollection TC {
+                union Union1 
+                {
+                    UInt16 e1
+                    Boolean e2
+                    String e3
+                }
+                const Union1 uni1 = { e1: 1 }
+                const Union1 uni2 = { e3: "foo" }
+            }
+        """)
+
+        self.assertEqual(package.name, "P")
+        self.assertEqual(len(package.typecollections), 1)
+        constant = package.typecollections["TC"].constants["uni1"]
+        self.assertEqual(isinstance(constant.expression, ast.InitializerExpressionStruct), True)
+        self.assertEqual(len(constant.expression.elements), 1)
+        self.assertEqual(constant.expression.elements["e1"].value, 1)
+
+        constant = package.typecollections["TC"].constants["uni2"]
+        self.assertEqual(isinstance(constant.expression, ast.InitializerExpressionStruct), True)
+        self.assertEqual(len(constant.expression.elements), 1)
+        self.assertEqual(constant.expression.elements["e3"].value, "foo")
