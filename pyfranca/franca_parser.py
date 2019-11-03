@@ -746,21 +746,56 @@ class Parser(object):
         constant_def : structured_comment CONST numeric_type ID '=' arithmetic_term
                      | structured_comment CONST boolean_type ID '=' arithmetic_term
                      | structured_comment CONST string_type ID '=' string_val
-        """
-        const_type = getattr(ast, p[3].name, None)
-        if not const_type:
-            raise ParserException("Unknown value type: {}".format(p[3].name))
-
-        if p[6].name is not None:
+                     | structured_comment CONST fqn_type ID '=' collection
+         """
+        if isinstance(p[6], ast.Type) and p[6].name is not None:
             term_type = getattr(ast, p[6].name, None)
             if not term_type:
                 raise ParserException("Unknown value type: {}".format(p[6].name))
 
         p[0] = ast.Constant(name=p[4],
-                            element_type=const_type(),
+                            element_type=p[3],
                             element_value=None,
                             comments=p[1],
                             element_expression=p[6])
+
+    # noinspection PyIncorrectDocstring
+    @staticmethod
+    def p_collection_1(p):
+        """
+        collection :  '[' collection_element ']'
+                   |  "[" "]"
+        """
+        if len(p) > 3:
+            p[0] = p[2]
+        else:
+            p[0] = ast.Collection()
+
+    # noinspection PyIncorrectDocstring
+    @staticmethod
+    def p_collection_element_1(p):
+        """
+        collection_element : arithmetic_term
+        """
+        collection = [p[1]]
+        p[0] = ast.Collection(collection)
+
+    # noinspection PyUnusedLocal, PyIncorrectDocstring
+    @staticmethod
+    def p_collection_element_2(p):
+        """
+        collection_element : empty
+        """
+        p[0] = ast.Collection()
+
+    # noinspection PyIncorrectDocstring
+    @staticmethod
+    def p_collection_element_3(p):
+        """
+        collection_element :  collection_element "," arithmetic_term
+        """
+        p[0] = p[1]
+        p[0].elements.append(p[3])
 
     # noinspection PyIncorrectDocstring
     @staticmethod
@@ -993,9 +1028,9 @@ class Parser(object):
     @staticmethod
     def p_type_3(p):
         """
-        type : fqn
+        type : fqn_type
         """
-        p[0] = ast.Reference(name=p[1])
+        p[0] = p[1]
 
     # noinspection PyIncorrectDocstring
     @staticmethod
@@ -1005,6 +1040,15 @@ class Parser(object):
         """
         element_type = ast.Reference(name=p[1])
         p[0] = ast.Array(name=None, element_type=element_type)
+
+    # noinspection PyIncorrectDocstring
+    @staticmethod
+    def p_fqn_type(p):
+        """
+        fqn_type : fqn
+        """
+        p[0] = ast.Reference(name=p[1])
+
 
     # noinspection PyUnusedLocal, PyIncorrectDocstring
     @staticmethod

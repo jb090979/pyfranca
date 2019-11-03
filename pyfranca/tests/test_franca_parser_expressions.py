@@ -529,9 +529,9 @@ class TestNumericExpression(BaseTestCase):
 
 
 class TestBooleanExpression(BaseTestCase):
-    """Test that unsupported Franca features fail appropriately."""
+    """Test constants which are initialized with boolean expressions."""
 
-    def test_expressions(self):
+    def test_valid_boolean_expressions(self):
         """Franca 0.9.2, section 5.2.1"""
         package =  self._assertParse("""
             package P
@@ -607,3 +607,45 @@ class TestBooleanExpression(BaseTestCase):
         self.assertEqual(isinstance(constant.expression.operand2, ast.ValueReference), True)
         self.assertEqual(constant.expression.operand2.reference_name, "d")
         self.assertEqual(constant.expression.operator, "||")
+
+
+class TestArrayExpression(BaseTestCase):
+    """Test constant array that are initialized with a list"""
+
+    def test_valid_list_expressions(self):
+        """Franca 0.9.2, section 5.2.1"""
+        package =  self._assertParse("""
+            package P
+            typeCollection TC {
+               array Array1 of UInt16
+               const Array1 empty = []
+               const Array1 one = [ 123 ] 
+               const Array1 full = [ 1, 2, 2+3, 100*100+100 ] 
+            }
+        """)
+
+        self.assertEqual(package.name, "P")
+        self.assertEqual(len(package.typecollections), 1)
+
+        constant = package.typecollections["TC"].constants["empty"]
+        self.assertEqual(isinstance(constant.expression, ast.Collection), True)
+        self.assertEqual(len(constant.expression.elements), 0)
+
+        constant = package.typecollections["TC"].constants["one"]
+        self.assertEqual(isinstance(constant.expression, ast.Collection), True)
+        self.assertEqual(len(constant.expression.elements), 1)
+        self.assertEqual(isinstance(constant.expression.elements[0], ast.Value), True)
+        self.assertEqual(constant.expression.elements[0].value, 123)
+
+        constant = package.typecollections["TC"].constants["full"]
+        self.assertEqual(isinstance(constant.expression, ast.Collection), True)
+        self.assertEqual(len(constant.expression.elements), 4)
+        self.assertEqual(isinstance(constant.expression.elements[0], ast.Value), True)
+        self.assertEqual(constant.expression.elements[0].value, 1)
+        self.assertEqual(isinstance(constant.expression.elements[1], ast.Value), True)
+        self.assertEqual(constant.expression.elements[1].value, 2)
+        # i do not check all sub elements of the terms. terms are testded in other test routines. 
+        self.assertEqual(isinstance(constant.expression.elements[2], ast.Term), True)
+        self.assertEqual(constant.expression.elements[2].operator, "+")
+        self.assertEqual(isinstance(constant.expression.elements[3], ast.Term), True)
+        self.assertEqual(constant.expression.elements[3].operator, "+")

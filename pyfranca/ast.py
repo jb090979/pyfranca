@@ -493,6 +493,12 @@ class ValueReference(Value):
         self.reference = None
 
 
+class Collection:
+
+    def __init__(self, elements=[]):
+        self.elements = elements
+
+
 class Interface(Namespace):
 
     def __init__(self, name, flags=None, members=None, extends=None, comments=None):
