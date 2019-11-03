@@ -539,6 +539,8 @@ class TestBooleanExpression(BaseTestCase):
                 const Boolean b1 = true
                 const Boolean b2 = MAX_COUNT > 3
                 const Boolean b3 = (a && b) || (foo=="bar")
+                const Boolean b4 =  a > b || c > d
+                const Boolean b5 =  a || b > c || d
             }
         """)
 
@@ -566,7 +568,6 @@ class TestBooleanExpression(BaseTestCase):
         self.assertEqual(isinstance(constant.expression.operand1.term.operand2, ast.ValueReference), True)
         self.assertEqual(constant.expression.operand1.term.operand2.reference_name, "b")
         self.assertEqual(constant.expression.operand1.term.operator, "&&")
-
         self.assertEqual(isinstance(constant.expression.operand2, ast.ParentExpression), True)
         self.assertEqual(isinstance(constant.expression.operand2.term, ast.Term), True)
         self.assertEqual(isinstance(constant.expression.operand2.term.operand1, ast.ValueReference), True)
@@ -574,3 +575,35 @@ class TestBooleanExpression(BaseTestCase):
         self.assertEqual(isinstance(constant.expression.operand1.term.operand2, ast.Value), True)
         self.assertEqual(constant.expression.operand2.term.operand2.value, "bar")
         self.assertEqual(constant.expression.operand2.term.operator, "==")
+
+        constant = package.typecollections["TC"].constants["b4"]
+        self.assertEqual(isinstance(constant.expression, ast.Term), True)
+        self.assertEqual(isinstance(constant.expression.operand1, ast.Term), True)
+        self.assertEqual(isinstance(constant.expression.operand1.operand1, ast.ValueReference), True)
+        self.assertEqual(constant.expression.operand1.operand1.reference_name, "a")
+        self.assertEqual(isinstance(constant.expression.operand1.operand2, ast.ValueReference), True)
+        self.assertEqual(constant.expression.operand1.operand2.reference_name, "b")
+        self.assertEqual(constant.expression.operand1.operator, ">")
+
+        self.assertEqual(isinstance(constant.expression.operand2, ast.Term), True)
+        self.assertEqual(isinstance(constant.expression.operand2.operand1, ast.ValueReference), True)
+        self.assertEqual(constant.expression.operand2.operand1.reference_name, "c")
+        self.assertEqual(isinstance(constant.expression.operand2.operand2, ast.ValueReference), True)
+        self.assertEqual(constant.expression.operand2.operand2.reference_name, "d")
+        self.assertEqual(constant.expression.operand2.operator, ">")
+
+        constant = package.typecollections["TC"].constants["b5"]
+        self.assertEqual(isinstance(constant.expression, ast.Term), True)
+        self.assertEqual(isinstance(constant.expression.operand1, ast.Term), True)
+        self.assertEqual(isinstance(constant.expression.operand1.operand1, ast.ValueReference), True)
+        self.assertEqual(constant.expression.operand1.operand1.reference_name, "a")
+        self.assertEqual(isinstance(constant.expression.operand1.operand2, ast.Term), True)
+
+        self.assertEqual(isinstance(constant.expression.operand1.operand2.operand1, ast.ValueReference), True)
+        self.assertEqual(constant.expression.operand1.operand2.operand1.reference_name, "b")
+        self.assertEqual(isinstance(constant.expression.operand1.operand2.operand2, ast.ValueReference), True)
+        self.assertEqual(constant.expression.operand1.operand2.operand2.reference_name, "c")
+        self.assertEqual(constant.expression.operand1.operand2.operator, ">")
+        self.assertEqual(isinstance(constant.expression.operand2, ast.ValueReference), True)
+        self.assertEqual(constant.expression.operand2.reference_name, "d")
+        self.assertEqual(constant.expression.operator, "||")
