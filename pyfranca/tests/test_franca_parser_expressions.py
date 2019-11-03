@@ -718,3 +718,51 @@ class TestStructExpression(BaseTestCase):
          """)
         self.assertEqual(str(context.exception),
                          "Duplicate initializer 'e1'.")
+
+
+class TestMapExpression(BaseTestCase):
+    """Test constant of type struct that are initialized with an expression"""
+
+    def test_valid_map_expressions(self):
+        """Franca 0.9.2, section 5.2.2"""
+        package =  self._assertParse("""
+            package P
+            typeCollection TC {
+                map Map1 { UInt16 to String }
+                const Map1 m1 = [ 1 => "one", 2 => "two" ]
+            }
+        """)
+
+        self.assertEqual(package.name, "P")
+        self.assertEqual(len(package.typecollections), 1)
+        constant = package.typecollections["TC"].constants["m1"]
+        self.assertEqual(isinstance(constant.expression, ast.InitializerExpressionMap), True)
+        self.assertEqual(len(constant.expression.elements), 2)
+        self.assertEqual(isinstance(constant.expression.elements[0][0], ast.Value), True)
+        self.assertEqual(constant.expression.elements[0][0].value, 1)
+        self.assertEqual(isinstance(constant.expression.elements[0][1], ast.Value), True)
+        self.assertEqual(constant.expression.elements[0][1].value, "one")
+        self.assertEqual(isinstance(constant.expression.elements[1][0], ast.Value), True)
+        self.assertEqual(constant.expression.elements[1][0].value, 2)
+        self.assertEqual(isinstance(constant.expression.elements[1][1], ast.Value), True)
+        self.assertEqual(constant.expression.elements[1][1].value, "two")
+
+    def test_valid_map_expressions_complex(self):
+        """Franca 0.9.2, section 5.2.2"""
+        package =  self._assertParse("""
+            package P
+            typeCollection TC {
+                map Map1 { UInt16 to String }
+                const Map1 m1 = [ 1+2*3 => a>b, 3+2*1 => a<b ]
+            }
+        """)
+
+        self.assertEqual(package.name, "P")
+        self.assertEqual(len(package.typecollections), 1)
+        constant = package.typecollections["TC"].constants["m1"]
+        self.assertEqual(isinstance(constant.expression, ast.InitializerExpressionMap), True)
+        self.assertEqual(len(constant.expression.elements), 2)
+        self.assertEqual(isinstance(constant.expression.elements[0][0], ast.Term), True)
+        self.assertEqual(isinstance(constant.expression.elements[0][1], ast.Term), True)
+        self.assertEqual(isinstance(constant.expression.elements[1][0], ast.Term), True)
+        self.assertEqual(isinstance(constant.expression.elements[1][1], ast.Term), True)

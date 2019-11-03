@@ -505,6 +505,12 @@ class InitializerExpressionStruct:
         self.elements = elements
 
 
+class InitializerExpressionMap:
+
+    def __init__(self, elements=[]):
+        self.elements = elements
+
+
 class Interface(Namespace):
 
     def __init__(self, name, flags=None, members=None, extends=None, comments=None):

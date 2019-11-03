@@ -748,6 +748,7 @@ class Parser(object):
                      | structured_comment CONST string_type ID '=' string_val
                      | structured_comment CONST fqn_type ID '=' initializer_expression_array
                      | structured_comment CONST fqn_type ID '=' initializer_expression_struct
+                     | structured_comment CONST fqn_type ID '=' initializer_expression_map
          """
         if isinstance(p[6], ast.Type) and p[6].name is not None:
             term_type = getattr(ast, p[6].name, None)
@@ -830,6 +831,34 @@ class Parser(object):
             raise ParserException(
                 "Duplicate initializer '{}'.".format(p[3]))
 
+        # noinspection PyIncorrectDocstring
+
+    @staticmethod
+    def p_initializer_expression_map(p):
+        """
+        initializer_expression_map :  '[' initializer_expression_map_element ']'
+        """
+        p[0] = p[2]
+
+    # noinspection PyIncorrectDocstring
+    @staticmethod
+    def p_initializer_expression_map_element_1(p):
+        """
+        initializer_expression_map_element : arithmetic_term ASSIGN arithmetic_term
+        """
+        tmp_pair_list = [(p[1], p[3])]
+        p[0] = ast.InitializerExpressionMap(tmp_pair_list)
+
+    # noinspection PyIncorrectDocstring
+    @staticmethod
+    def p_initializer_expression_map_element_2(p):
+        """
+        initializer_expression_map_element :  initializer_expression_map_element "," arithmetic_term ASSIGN arithmetic_term
+        """
+        p[0] = p[1]
+        tmp_pair = (p[3], p[5])
+        p[0].elements.append(tmp_pair)
+
     # noinspection PyIncorrectDocstring
     @staticmethod
     def p_arithmetic_term_1(p):
@@ -904,7 +933,6 @@ class Parser(object):
                         | boolean_val
                         | string_val
         """
-        print("test123 {}".format(p[1].value))
         p[0] = p[1]
 
     # noinspection PyIncorrectDocstring
@@ -974,6 +1002,17 @@ class Parser(object):
         """
         numeric_value : real_val
                       | integer_val
+        """
+        p[0] = p[1]
+
+    # noinspection PyIncorrectDocstring
+    @staticmethod
+    def p_value(p):
+        """
+        value : real_val
+              | integer_val
+              | string_val
+              | boolean_val
         """
         p[0] = p[1]
 
