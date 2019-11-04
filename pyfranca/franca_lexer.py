@@ -54,7 +54,6 @@ class Lexer(object):
         "to",
         "const",
 
-
         # Types
         "Int8",
         "Int16",
@@ -96,7 +95,7 @@ class Lexer(object):
     t_ignore = " \t"
 
     # Literals
-    literals = [".", "{", "}", "*", "=", "[", "]",  ",",
+    literals = [".", "{", "}", "*", "=", "[", "]", ",",
                 "(", ")", ":"]
 
     # Identifiers and keywords
@@ -246,7 +245,7 @@ class Lexer(object):
     @staticmethod
     def t_error(t):
         raise LexerException("Illegal character '{}' at line {}.".format(
-                             t.value[0], t.lineno))
+            t.value[0], t.lineno))
 
     def __init__(self, **kwargs):
         """

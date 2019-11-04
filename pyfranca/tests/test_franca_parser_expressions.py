@@ -26,7 +26,7 @@ class TestNumericExpression(BaseTestCase):
 
     def test_expressions(self):
         """Franca 0.9.2, section 5.2.1"""
-        package =  self._assertParse("""
+        package = self._assertParse("""
             package P
             typeCollection TC {
                 const UInt32 u1 = 55
@@ -54,7 +54,7 @@ class TestNumericExpression(BaseTestCase):
 
     def test_arithmetic_operator_integer_numbers(self):
         """Franca 0.9.2, section 5.2.1"""
-        package =  self._assertParse("""
+        package = self._assertParse("""
             package P
             typeCollection TC {
                 const UInt32 u1 = 3 + 5 * 4 + 5
@@ -139,7 +139,7 @@ class TestNumericExpression(BaseTestCase):
 
     def test_arithmetic_operator_real_numbers(self):
         """Franca 0.9.2, section 5.2.1"""
-        package =  self._assertParse("""
+        package = self._assertParse("""
             package P
             typeCollection TC {
                 const Float u1 = 3.0F + 5.0F * 4.0F + 6.0F
@@ -279,7 +279,6 @@ class TestNumericExpression(BaseTestCase):
         self.assertEqual(constant.expression.term.operand1.operand1.term.operand1.value, 3)
         self.assertEqual(constant.expression.term.operand1.operand2.value, 3)
         self.assertEqual(isinstance(constant.expression.term.operand1.operand1.term.operand2, ast.Term), True)
-
 
         'Level2 Operand 2'
         self.assertEqual(constant.expression.term.operand2.term.operand1.value, 5)
@@ -533,7 +532,7 @@ class TestBooleanExpression(BaseTestCase):
 
     def test_valid_boolean_expressions(self):
         """Franca 0.9.2, section 5.2.1"""
-        package =  self._assertParse("""
+        package = self._assertParse("""
             package P
             typeCollection TC {
                 const Boolean b1 = true
@@ -614,7 +613,7 @@ class TestArrayExpression(BaseTestCase):
 
     def test_valid_list_expressions(self):
         """Franca 0.9.2, section 5.2.1"""
-        package =  self._assertParse("""
+        package = self._assertParse("""
             package P
             typeCollection TC {
                array Array1 of UInt16
@@ -652,7 +651,7 @@ class TestArrayExpression(BaseTestCase):
 
     def test_valid_list_expressions_struct(self):
         """Franca 0.9.2, section 5.2.1"""
-        package =  self._assertParse("""
+        package = self._assertParse("""
             package P
             typeCollection TC {
                struct Struct1 
@@ -685,7 +684,7 @@ class TestArrayExpression(BaseTestCase):
 
     def test_valid_list_expressions_map(self):
         """Franca 0.9.2, section 5.2.1"""
-        package =  self._assertParse("""
+        package = self._assertParse("""
             package P
             typeCollection TC {
                struct Struct1 
@@ -725,7 +724,7 @@ class TestStructExpression(BaseTestCase):
 
     def test_valid_struct_expressions(self):
         """Franca 0.9.2, section 5.2.2"""
-        package =  self._assertParse("""
+        package = self._assertParse("""
             package P
             typeCollection TC {
                 struct Struct1 
@@ -748,7 +747,7 @@ class TestStructExpression(BaseTestCase):
 
     def test_valid_struct_expressions_complex(self):
         """Franca 0.9.2, section 5.2.2"""
-        package =  self._assertParse("""
+        package = self._assertParse("""
             package P
             typeCollection TC {
                 struct Struct1 
@@ -794,7 +793,7 @@ class TestMapExpression(BaseTestCase):
 
     def test_valid_map_expressions(self):
         """Franca 0.9.2, section 5.2.2"""
-        package =  self._assertParse("""
+        package = self._assertParse("""
             package P
             typeCollection TC {
                 map Map1 { UInt16 to String }
@@ -818,7 +817,7 @@ class TestMapExpression(BaseTestCase):
 
     def test_valid_map_expressions_complex(self):
         """Franca 0.9.2, section 5.2.2"""
-        package =  self._assertParse("""
+        package = self._assertParse("""
             package P
             typeCollection TC {
                 map Map1 { UInt16 to String }
@@ -842,7 +841,7 @@ class TestUnionExpression(BaseTestCase):
 
     def test_valid_map_expressions(self):
         """Franca 0.9.2, section 5.2.2"""
-        package =  self._assertParse("""
+        package = self._assertParse("""
             package P
             typeCollection TC {
                 union Union1 
@@ -867,4 +866,3 @@ class TestUnionExpression(BaseTestCase):
         self.assertEqual(isinstance(constant.expression, ast.InitializerExpressionStruct), True)
         self.assertEqual(len(constant.expression.elements), 1)
         self.assertEqual(constant.expression.elements["e3"].value, "foo")
-

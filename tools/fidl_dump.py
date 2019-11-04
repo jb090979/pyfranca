@@ -7,7 +7,7 @@ from pyfranca import Processor, LexerException, ParserException, \
 
 def dump_comments(item, prefix):
     for key, value in item.comments.items():
-        print (prefix + key + ": " + value)
+        print(prefix + key + ": " + value)
 
 
 def dump_namespace(namespace):
@@ -98,11 +98,11 @@ def dump_packages(packages):
 
 
 def plot_namepsace_dependencie(namespace, output):
-    ns_fqn = "{}.{}".format(namespace.package.name,namespace.name)
+    ns_fqn = "{}.{}".format(namespace.package.name, namespace.name)
 
     ns_fqn_line = "\n\t\"" + ns_fqn + "\"\n"
     if ns_fqn_line not in output:
-         output += ns_fqn_line
+        output += ns_fqn_line
     for import_ns in namespace.namespace_references:
         import_ns_fqn = "{}.{}".format(import_ns.package.name, import_ns.name)
         tmp_output = "\t\"" + ns_fqn + "\" -> \"" + import_ns_fqn + "\";\n"
@@ -199,6 +199,7 @@ def main():
         plot_packages_dependencies(processor.packages)
     elif args.plot == "n":
         plot_namespaces_dependencies(processor.packages)
+
 
 if __name__ == "__main__":
     main()

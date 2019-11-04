@@ -1132,6 +1132,7 @@ class TestBroadcasts(BaseTestCase):
 
 class TestConstants(BaseTestCase):
     """Test parsing constants."""
+
     def test_constants(self):
         """Franca 0.9.2, section 5.2.1"""
         package = self._parse("""

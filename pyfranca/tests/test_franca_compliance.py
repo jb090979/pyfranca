@@ -10,7 +10,6 @@ import shlex
 from pyfranca import ProcessorException
 from .test_franca_processor import BaseTestCase
 
-
 # TODO: Work in progress.
 ENABLED = os.environ.get('PYFRANCA_COMPLIANCE_TESTS')
 
@@ -26,7 +25,6 @@ def setUpModule():
 
 
 class BaseComplianceTestCase(BaseTestCase):
-
     MODEL_DIR = "."
 
     def _import_model(self, fname):

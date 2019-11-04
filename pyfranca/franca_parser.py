@@ -11,7 +11,6 @@ import re
 
 
 class ArgumentGroup(object):
-
     __metaclass__ = ABCMeta
 
     def __init__(self, arguments=None):
@@ -204,7 +203,7 @@ class Parser(object):
         """
         def : IMPORT fqn '.' TIMES FROM STRING_VAL
         """
-        fqn = p[2]+p[3]+p[4]
+        fqn = p[2] + p[3] + p[4]
         p[0] = ast.Import(file_name=p[6], namespace=fqn)
 
     # noinspection PyIncorrectDocstring
@@ -612,7 +611,8 @@ class Parser(object):
         """
         if isinstance(p[4], ast.Term):
             if p[4].name is not None and p[4].name not in Parser.integer_types:
-                raise  ParserException("Enumerator have to be of type Integer. But expression is of type: '{}'.".format(p[4].name))
+                raise ParserException(
+                    "Enumerator have to be of type Integer. But expression is of type: '{}'.".format(p[4].name))
         p[0] = ast.Enumerator(name=p[2], element_expression=p[4], comments=p[1])
 
     # noinspection PyIncorrectDocstring
@@ -1116,7 +1116,6 @@ class Parser(object):
         """
         p[0] = ast.Reference(name=p[1])
 
-
     # noinspection PyUnusedLocal, PyIncorrectDocstring
     @staticmethod
     def p_empty(p):
@@ -1130,7 +1129,7 @@ class Parser(object):
     def p_error(p):
         if p:
             raise ParserException("Syntax error at line {} near '{}'.".format(
-                                  p.lineno, p.value))
+                p.lineno, p.value))
         else:
             raise ParserException("Reached unexpected end of file.")
 

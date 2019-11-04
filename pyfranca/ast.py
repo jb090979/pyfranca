@@ -81,19 +81,18 @@ class Import(object):
 
     def __init__(self, file_name, namespace=None):
         self.file = file_name
-        self.namespace = namespace          # None for "import model"
+        self.namespace = namespace  # None for "import model"
         self.package_reference = None
         self.namespace_reference = None
 
 
 class Namespace(object):
-
     __metaclass__ = ABCMeta
 
     def __init__(self, name, flags=None, members=None, comments=None):
         self.package = None
         self.name = name
-        self.flags = flags if flags else []         # Unused
+        self.flags = flags if flags else []  # Unused
         self.version = None
         self.typedefs = OrderedDict()
         self.enumerations = OrderedDict()
@@ -112,12 +111,12 @@ class Namespace(object):
         if not isinstance(name, str):
             raise TypeError
         res = name in self.typedefs or \
-            name in self.enumerations or \
-            name in self.structs or \
-            name in self.unions or \
-            name in self.arrays or \
-            name in self.maps or \
-            name in self.constants
+              name in self.enumerations or \
+              name in self.structs or \
+              name in self.unions or \
+              name in self.arrays or \
+              name in self.maps or \
+              name in self.constants
         return res
 
     def __getitem__(self, name):
@@ -198,7 +197,6 @@ class TypeCollection(Namespace):
 
 
 class Type(object):
-
     __metaclass__ = ABCMeta
 
     def __init__(self, name=None, comments=None):
@@ -215,7 +213,6 @@ class Typedef(Type):
 
 
 class PrimitiveType(Type):
-
     __metaclass__ = ABCMeta
 
     def __init__(self):
@@ -301,7 +298,6 @@ class ByteBuffer(PrimitiveType):
 
 
 class ComplexType(Type):
-
     __metaclass__ = ABCMeta
 
     def __init__(self, comments=None):
@@ -309,7 +305,6 @@ class ComplexType(Type):
 
 
 class Value(Type):
-
     _metaclass__ = ABCMeta
 
     def __init__(self, value, value_type=None):
@@ -318,7 +313,6 @@ class Value(Type):
 
 
 class Term(Value):
-
     _metaclass__ = ABCMeta
 
     def __init__(self, operator, value_type, operand1, operand2):
@@ -330,7 +324,6 @@ class Term(Value):
 
 
 class ParentExpression(Value):
-
     _metaclass__ = ABCMeta
 
     def __init__(self, term, value_type):
@@ -339,15 +332,14 @@ class ParentExpression(Value):
 
 
 class IntegerValue(Value):
-
     BINARY = 2
     DECIMAL = 10
     HEXADECIMAL = 16
 
     def __init__(self, value, base=DECIMAL):
-        if -(2**7-1) <= value <= 2**7-1:
+        if -(2 ** 7 - 1) <= value <= 2 ** 7 - 1:
             value_type = "Int8"
-        elif 0 <= value <= 2**8-1:
+        elif 0 <= value <= 2 ** 8 - 1:
             value_type = "UInt8"
         elif -(2 ** 15 - 1) <= value <= 2 ** 15 - 1:
             value_type = "Int16"
@@ -399,7 +391,7 @@ class Enumeration(ComplexType):
         self.enumerators = enumerators if enumerators else OrderedDict()
         self.extends = extends
         self.reference = None
-        self.flags = flags if flags else []         # Unused
+        self.flags = flags if flags else []  # Unused
 
 
 class Enumerator(object):
@@ -438,7 +430,7 @@ class Union(ComplexType):
         self.fields = fields if fields else OrderedDict()
         self.extends = extends
         self.reference = None
-        self.flags = flags if flags else []         # Unused
+        self.flags = flags if flags else []  # Unused
 
 
 class UnionField(object):
@@ -453,7 +445,7 @@ class Array(ComplexType):
 
     def __init__(self, name, element_type, comments=None):
         super(Array, self).__init__(comments=comments)
-        self.name = name            # None for implicit arrays.
+        self.name = name  # None for implicit arrays.
         self.type = element_type
 
 
@@ -472,7 +464,7 @@ class Constant(ComplexType):
         super(Constant, self).__init__(comments=comments)
         self.name = name
         self.type = element_type
-        self.value = element_value    # value from solved expression
+        self.value = element_value  # value from solved expression
         self.expression = element_expression
 
 
@@ -528,9 +520,9 @@ class Interface(Namespace):
         if not isinstance(name, str):
             raise TypeError
         res = super(Interface, self).__contains__(name) or \
-            name in self.attributes or \
-            name in self.methods or \
-            name in self.broadcasts
+              name in self.attributes or \
+              name in self.methods or \
+              name in self.broadcasts
         return res
 
     def __getitem__(self, name):

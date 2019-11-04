@@ -218,9 +218,9 @@ class TestCheckRegularExpressions(BaseTestCase):
     def test_real_valid_syntax(self):
         """test a real value """
         self.tokenize("1.1\n-2.2\n3.3e3\n-4.4e4\n5.5e-5"
-                                        "-6.6e-6\n0.00001\n-0.000002\n1e4\n-1e4"
-                                        ".1\n-.2\n.3e3\n-.4e4\n.5e-5"
-                                        "-.6e-6\n.00001\n-.000002")
+                      "-6.6e-6\n0.00001\n-0.000002\n1e4\n-1e4"
+                      ".1\n-.2\n.3e3\n-.4e4\n.5e-5"
+                      "-.6e-6\n.00001\n-.000002")
         self.check("REAL_VAL", "1.1")
         self.check("REAL_VAL", "-2.2")
         self.check("REAL_VAL", "3.3e3")
@@ -267,7 +267,6 @@ class TestCheckRegularExpressions(BaseTestCase):
         self.check("ID", 'b1')
         self.check("=", '=')
         self.check("BOOLEAN_VAL", True)
-
 
     def test_type_mult_expression(self):
         """test an integer """
@@ -396,7 +395,7 @@ class TestCheckRegularExpressions(BaseTestCase):
         self.check("ID", 'b2')
         self.check("=")
         self.check("ID", 'MAX_COUNT')
-        self.check("GT",">")
+        self.check("GT", ">")
         self.check("INTEGER_VAL", 3)
 
     def test_type_boolean_expression(self):
@@ -415,8 +414,3 @@ class TestCheckRegularExpressions(BaseTestCase):
         self.check("ID", "foo")
         self.check("EQ", "==")
         self.check("STRING_VAL", "bar")
-
-
-
-
-

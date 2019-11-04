@@ -7,6 +7,7 @@ import unittest
 from pyfranca import LexerException, ParserException, Parser, ast
 from pyfranca import Lexer
 
+
 class BaseTestCase(unittest.TestCase):
 
     @staticmethod

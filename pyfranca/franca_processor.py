@@ -1,4 +1,3 @@
-
 import os
 from collections import OrderedDict
 from pyfranca import franca_parser, ast
@@ -86,7 +85,7 @@ class Processor(object):
         pkg, ns, name = Processor.split_fqn(fqn)
 
         resolved_namespace = None
-        count = 0 # number of matches, 0 not found, 1 ok, >1 ambiguous
+        count = 0  # number of matches, 0 not found, 1 ok, >1 ambiguous
         package_fqn = ""
 
         if pkg is not None:
@@ -321,7 +320,6 @@ class Processor(object):
             for ns3 in package.typecollections.values():
                 ns1.namespace_references.append(ns3)
 
-
     def _update_package_references(self, package, imported_package, package_import):
         """
         Update type references in a package.
@@ -374,7 +372,7 @@ class Processor(object):
         if isinstance(expression, ast.InitializerExpressionArray):
             ref_string += "[ "
             for element in expression.elements:
-                ref_string  = self.print_expression(element, ref_string)
+                ref_string = self.print_expression(element, ref_string)
                 ref_string += ", "
 
             #  remove last ,
@@ -423,11 +421,11 @@ class Processor(object):
     def print_constant(self, constant):
         if isinstance(constant, ast.Constant):
             ref_string = constant.name + " = "
-            ref_string = self.print_expression(constant.expression,ref_string)
+            ref_string = self.print_expression(constant.expression, ref_string)
         else:
             raise ProcessorException(
                 "print_expression argument is not a ast.Constant type: Type:'{}'".format(
-                   type(constant)))
+                    type(constant)))
         return ref_string
 
     def import_package(self, fspec, package, references=None):
@@ -483,7 +481,6 @@ class Processor(object):
             self.packages[package.name] = package
             # Register the package file in the processor.
             self.files[abs_fspec] = package
-
 
     def _exists(self, fspec):
         """
