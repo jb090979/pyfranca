@@ -49,13 +49,15 @@ class TestMisc(BaseTestCase):
         package = self._assertParse("""
                           package P
                        typeCollection TC {
-                           union Union1 {
-                            UInt16 e1
-                            Boolean e2
-                            String e3
+                           struct Struct1 
+                            {
+                                Boolean e1
+                                UInt16 e2
+                                String e3
                             }
-                            const Union1 uni1 = { e1: 1 }
-                            const Union1 uni2 = { e3: "bar" }
+                            array Array1 of Struct1
+                            const Array1 a1 =  [ { e1: true, e2: 1, e3: "foo" }, 
+                                                 { e1: false, e2:2, e3: "bar" }]
                        }
         """)
         print("Stop here for debugging!")

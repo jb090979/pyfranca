@@ -778,6 +778,8 @@ class Parser(object):
     def p_initializer_expression_array_element_1(p):
         """
         initializer_expression_array_element : arithmetic_term
+                                             | initializer_expression_struct
+                                             | initializer_expression_map
         """
         tmp_list = [p[1]]
         p[0] = ast.InitializerExpressionArray(tmp_list)
@@ -795,6 +797,8 @@ class Parser(object):
     def p_initializer_expression_array_element_3(p):
         """
         initializer_expression_array_element :  initializer_expression_array_element "," arithmetic_term
+                                             |  initializer_expression_array_element "," initializer_expression_struct
+                                             |  initializer_expression_array_element "," initializer_expression_map
         """
         p[0] = p[1]
         p[0].elements.append(p[3])
@@ -845,6 +849,7 @@ class Parser(object):
     def p_initializer_expression_map_element_1(p):
         """
         initializer_expression_map_element : arithmetic_term ASSIGN arithmetic_term
+                                           | arithmetic_term ASSIGN initializer_expression_struct
         """
         tmp_pair_list = [(p[1], p[3])]
         p[0] = ast.InitializerExpressionMap(tmp_pair_list)
@@ -854,6 +859,7 @@ class Parser(object):
     def p_initializer_expression_map_element_2(p):
         """
         initializer_expression_map_element :  initializer_expression_map_element "," arithmetic_term ASSIGN arithmetic_term
+                                           |  initializer_expression_map_element "," arithmetic_term ASSIGN initializer_expression_struct
         """
         p[0] = p[1]
         tmp_pair = (p[3], p[5])
@@ -1002,17 +1008,6 @@ class Parser(object):
         """
         numeric_value : real_val
                       | integer_val
-        """
-        p[0] = p[1]
-
-    # noinspection PyIncorrectDocstring
-    @staticmethod
-    def p_value(p):
-        """
-        value : real_val
-              | integer_val
-              | string_val
-              | boolean_val
         """
         p[0] = p[1]
 

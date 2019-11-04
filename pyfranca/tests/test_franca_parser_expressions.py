@@ -650,6 +650,75 @@ class TestArrayExpression(BaseTestCase):
         self.assertEqual(isinstance(constant.expression.elements[3], ast.Term), True)
         self.assertEqual(constant.expression.elements[3].operator, "+")
 
+    def test_valid_list_expressions_struct(self):
+        """Franca 0.9.2, section 5.2.1"""
+        package =  self._assertParse("""
+            package P
+            typeCollection TC {
+               struct Struct1 
+                {
+                    Boolean e1
+                    UInt16 e2
+                    String e3
+                }
+                array Array1 of Struct1
+                const Array1 a1 =  [ { e1: true, e2: 1, e3: "foo" }, 
+                                     { e1: false, e2:2, e3: "bar" }]
+            }
+        """)
+
+        self.assertEqual(package.name, "P")
+        self.assertEqual(len(package.typecollections), 1)
+
+        constant = package.typecollections["TC"].constants["a1"]
+        self.assertEqual(isinstance(constant.expression, ast.InitializerExpressionArray), True)
+        self.assertEqual(len(constant.expression.elements), 2)
+        self.assertEqual(isinstance(constant.expression.elements[0], ast.InitializerExpressionStruct), True)
+        self.assertEqual(constant.expression.elements[0].elements["e1"].value, True)
+        self.assertEqual(constant.expression.elements[0].elements["e2"].value, 1)
+        self.assertEqual(constant.expression.elements[0].elements["e3"].value, "foo")
+
+        self.assertEqual(isinstance(constant.expression.elements[1], ast.InitializerExpressionStruct), True)
+        self.assertEqual(constant.expression.elements[1].elements["e1"].value, False)
+        self.assertEqual(constant.expression.elements[1].elements["e2"].value, 2)
+        self.assertEqual(constant.expression.elements[1].elements["e3"].value, "bar")
+
+    def test_valid_list_expressions_map(self):
+        """Franca 0.9.2, section 5.2.1"""
+        package =  self._assertParse("""
+            package P
+            typeCollection TC {
+               struct Struct1 
+                {
+                    Boolean e1
+                    UInt16 e2
+                    String e3
+                }
+                map Map1 { String to Struct1 }
+                const Map1 m1 = [ "foo" => { e1: true, e2: 1, e3: "foo" }, "bar"  => { e1: false, e2:2, e3: "bar" } ]
+            }
+        """)
+
+        self.assertEqual(package.name, "P")
+        self.assertEqual(len(package.typecollections), 1)
+
+        constant = package.typecollections["TC"].constants["m1"]
+        self.assertEqual(isinstance(constant.expression, ast.InitializerExpressionMap), True)
+        self.assertEqual(len(constant.expression.elements), 2)
+        self.assertEqual(isinstance(constant.expression.elements[0][0], ast.Value), True)
+        self.assertEqual(constant.expression.elements[0][0].value, "foo")
+        self.assertEqual(isinstance(constant.expression.elements[0][1], ast.InitializerExpressionStruct), True)
+        self.assertEqual(constant.expression.elements[0][1].elements["e1"].value, True)
+        self.assertEqual(constant.expression.elements[0][1].elements["e2"].value, 1)
+        self.assertEqual(constant.expression.elements[0][1].elements["e3"].value, "foo")
+
+        self.assertEqual(isinstance(constant.expression.elements[1][0], ast.Value), True)
+        self.assertEqual(constant.expression.elements[1][0].value, "bar")
+        self.assertEqual(isinstance(constant.expression.elements[1][1], ast.InitializerExpressionStruct), True)
+        self.assertEqual(constant.expression.elements[1][1].elements["e1"].value, False)
+        self.assertEqual(constant.expression.elements[1][1].elements["e2"].value, 2)
+        self.assertEqual(constant.expression.elements[1][1].elements["e3"].value, "bar")
+
 
 class TestStructExpression(BaseTestCase):
     """Test constant of type struct that are initialized with an expression"""
@@ -798,3 +867,4 @@ class TestUnionExpression(BaseTestCase):
         self.assertEqual(isinstance(constant.expression, ast.InitializerExpressionStruct), True)
         self.assertEqual(len(constant.expression.elements), 1)
         self.assertEqual(constant.expression.elements["e3"].value, "foo")
+
