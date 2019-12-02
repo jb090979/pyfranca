@@ -275,6 +275,9 @@ class Processor(object):
             self._update_type_references(namespace, name)
         for name in namespace.constants.values():
             self._update_type_references(namespace, name)
+            self._update_value_references(namespace, name.expression)
+            self._resolve_constant(name)
+
 
     def _update_interface_references(self, namespace):
         """
@@ -296,6 +299,247 @@ class Processor(object):
                 raise ProcessorException(
                     "Invalid interface reference '{}'.".format(
                         namespace.extends))
+
+    def _update_value_references(self, namespace, name):
+        if isinstance(name, ast.InitializerExpressionStruct):
+            for element in name.elements.values():
+                self._update_value_references(namespace, element)
+        elif isinstance(name, ast.InitializerExpressionMap):
+            for element in name.elements:
+                self._update_value_references(namespace, element[0])
+                self._update_value_references(namespace, element[1])
+        elif isinstance(name, ast.InitializerExpressionArray):
+            for element in name.elements:
+                self._update_value_references(namespace, element)
+        elif isinstance(name, ast.Term):
+            self._update_value_references(namespace, name.operand1)
+            self._update_value_references(namespace, name.operand2)
+        elif isinstance(name, ast.ParentExpression):
+            self._update_value_references(namespace, name.term)
+        elif isinstance(name, ast.ValueReference):
+            name.reference = self.resolve_value(namespace, name.reference_name)
+        else:
+            pass
+
+    @staticmethod
+    def resolve_value(namespace, fqn):
+        """
+        Resolve value references.
+
+        :param namespace: context ast.Namespace object.
+        :param fqn: FQN or ID string.
+        :return: Dereferenced ast.Constant object.
+        """
+        if not isinstance(namespace, ast.Namespace) or \
+                not isinstance(fqn, str):
+            raise ValueError("Unexpected input.")
+        pkg, ns, name = Processor.split_fqn(fqn)
+
+        resolved_constant = None
+        count = 0  # number of matches, 0 not found, 1 ok, >1 ambiguous
+        package_fqn = ""
+
+        if pkg is not None:
+            package_fqn += namespace.package.name + "."
+
+        if ns is not None:
+            package_fqn += namespace.name + "."
+
+        package_fqn += name
+
+        if package_fqn == fqn:
+            # fqn is with within this namespace
+            if name in namespace.constants:
+                resolved_constant = namespace.constants[name]
+                count += 1
+
+        # lock into visible namespaces
+        for ns_ref in namespace.namespace_references:
+            if pkg is not None:
+                if pkg != ns_ref.package.name:
+                    continue
+            if ns is not None:
+                if ns != ns_ref.name:
+                    continue
+
+            if name in ns_ref.constants:
+                count += 1
+                resolved_constant = ns_ref.constants[name]
+
+        if count > 1:
+            raise ProcessorException(
+                "Reference '{}' is ambiguous.".format(fqn))
+
+        if resolved_constant:
+            return resolved_constant
+
+        # Give up
+        raise ProcessorException(
+            "Unresolved reference '{}'.".format(fqn))
+
+    def calc(self, expression: ast.Term):
+
+        for operand in [expression.operand1, expression.operand2]:
+            if isinstance(operand, ast.Term):
+                self.calc(operand)
+            elif isinstance(operand, ast.ValueReference):
+                self._resolve_expression_value(operand)
+            elif isinstance(operand, ast.ParentExpression):
+                self._resolve_expression_value(operand)
+            elif isinstance(operand, ast.Value):
+                pass
+            else:
+                raise ProcessorException(
+                    "Only numeric types are allowed in a term. Bad Type: '{}'.".format(type(operand)))
+
+        # paasen die werte zusamman 2+"hello" geht ja nicht
+
+        if expression.operator == "*":
+            result = expression.operand1.value * expression.operand2.value
+        elif expression.operator == "/":
+            result = expression.operand1.value / expression.operand2.value
+        elif expression.operator == "+":
+            result = expression.operand1.value + expression.operand2.value
+        elif expression.operator == "-":
+            result = expression.operand1.value - expression.operand2.value
+        elif expression.operator == "==":
+            result = expression.operand1.value == expression.operand2.value
+        elif expression.operator == ">":
+            result = expression.operand1.value > expression.operand2.value
+        elif expression.operator == "<":
+            result = expression.operand1.value < expression.operand2.value
+        elif expression.operator == "<=":
+            result = expression.operand1.value <= expression.operand2.value
+        elif expression.operator == ">=":
+            result = expression.operand1.value >= expression.operand2.value
+        elif expression.operator == "!=":
+            result = expression.operand1.value != expression.operand2.value
+        elif expression.operator == "&&":
+            result = expression.operand1.value and expression.operand2.value
+        elif expression.operator == "||":
+            result = expression.operand1.value or expression.operand2.value
+        else:
+            raise ProcessorException(
+                "Unknown Operator '{}'.".format(expression.operator))
+        if type(result) == bool:
+            tmp_bool = ast.BooleanValue(result)
+            expression.value = tmp_bool.value
+            expression.name = tmp_bool.name
+        elif type(result) == int:
+            tmp_integer = ast.IntegerValue(result)
+            expression.value = tmp_integer.value
+            expression.name = tmp_integer.name
+            pass
+        elif type(result) == float:
+            float_max = float((2 - 2 ** -23) * 2 ** 127)  # IEEE_754
+            float_min = float(2 ** -126)  ##  IEEE 754
+            if float_min < abs(result) < float_max:
+                tmp_float = ast.FloatValue(result)
+                expression.value = tmp_float.value
+                expression.anme = tmp_float.name
+            else:
+                tmp_double = ast.DoubleValue(result)
+                expression.value = tmp_double.value
+                expression.name = tmp_double.name
+        else:
+            raise ProcessorException(
+                "No numeric type '{}'.".format(type(result)))
+
+    def _check_assignment(self, type, value):
+        integer_types = OrderedDict()
+        real_types = OrderedDict()
+        for i in range(4):
+            exponent = 8 * (2**i)
+            integer_types["Int{}".format(exponent)] = (-(2 ** (exponent - 1)), (2 ** (exponent - 1)) - 1)
+            integer_types["UInt{}".format(exponent)] = (0, (2**exponent)-1)
+        real_types["Float"] = (float(2 ** -126), float((2- 2 ** -23) * (2 ** 127)))
+        real_types["Double"] = (float(2 ** -1022), float((2 - 2 ** -52) * (2 ** 1023)))
+
+        if type in integer_types.keys():
+            if value.name not in integer_types.keys():
+                raise ProcessorException(
+                    "Value of type '{}' cannot  assigned to a value of type {}.".format(value.name, type))
+            elif not isinstance(value.value, int):
+                raise ProcessorException(
+                    "Value '{}' cannot  assigned to a constant of type {}.".format(str(value.value), type))
+            elif (value.value < integer_types[type][0]) or (value.value > integer_types[type][1]):
+                raise ProcessorException(
+                     "Value '{}' overflows range of constant type {}.".format(str(value.value), type))
+        elif type in real_types.keys():
+            if value.name not in real_types.keys():
+                raise ProcessorException(
+                    "Value of type '{}' cannot  assigned to a value of type {}.".format(value.name, type))
+            elif not isinstance(value.value, float):
+                raise ProcessorException(
+                    "Value '{}' cannot  assigned to a constant of type {}.".format(str(value.value), type))
+            elif (abs(value.value) < real_types[type][0]) or (abs(value.value) > real_types[type][1]):
+                raise ProcessorException(
+                     "Value '{}' overflows range of constant type {}.".format(str(value.value), type))
+        elif type == "String" and value.name is not "String":
+            raise ProcessorException(
+                    "Value of type '{}' cannot  assigned to a value of type {}.".format(value.name, type))
+        elif type == "Boolean" and value.name is not "Boolean":
+            raise ProcessorException(
+                "Value of type '{}' cannot  assigned to a value of type {}.".format(value.name, type))
+        elif type is None:
+            raise ProcessorException(
+                "Todo array, struct types")
+
+    def _resolve_constant(self, constant: ast.Constant):
+        if not constant.resolved:
+            self._resolve_expression_value(constant.expression)
+            constant.resolved = True
+            if isinstance(constant.expression, ast.Value):
+                if constant.type is not None:
+                    self._check_assignment(constant.type.name, constant.expression)
+                    constant.value = constant.expression.value
+                    #  prüfe hier Constant type und zugehörigen expreesion.name type.
+            else:
+                constant.value = None
+
+            if constant.type is None:
+                constant.type = type(constant.expression) #
+
+    def _resolve_expression_value(self, expression):
+        if expression.resolved:
+            pass
+        elif isinstance(expression, ast.InitializerExpressionStruct):
+            # constants of type struct don't have a value,
+            # but initializer of member could be a term that need to be resolved
+            for element in expression.elements.values():
+                self._resolve_expression_value(element)
+            expression.resolved = True
+        elif isinstance(expression, ast.InitializerExpressionMap):
+            # constants of type map don't have a value,
+            # but initializer of member could be a term that need to be resolved
+            for element in expression.elements:
+                self._resolve_expression_value(element[0])
+                self._resolve_expression_value(element[1])
+            expression.resolved = True
+        elif isinstance(expression, ast.InitializerExpressionArray):
+            # constants of type array don't have a value,
+            # but initializer of member could be a term that need to be resolved
+            for element in expression.elements:
+                self._resolve_expression_value(element)
+            expression.resolved = True
+        elif isinstance(expression, ast.Term):
+            self.calc(expression)
+        elif isinstance(expression, ast.ParentExpression):
+            self._resolve_expression_value(expression.term)
+            expression.value = expression.term.value
+            expression.name = expression.term.name
+            expression.resolve = True
+        elif isinstance(expression, ast.ValueReference):
+            self._resolve_constant(expression.reference)
+            expression.value = expression.reference.value
+            expression.name = expression.reference.type.name
+            expression.resolved = True
+        elif isinstance(expression, ast.Value):
+            pass
+        else:
+            raise ProcessorException(
+                "Unknown expression type '{}'.".format(type(expression)))
+        #  return expression.value, expression.type
 
     def _update_imported_namespaces_references(self, package, imported_namespace):
         for package_namespace in package.typecollections.values():

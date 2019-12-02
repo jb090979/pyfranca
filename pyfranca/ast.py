@@ -307,9 +307,10 @@ class ComplexType(Type):
 class Value(Type):
     _metaclass__ = ABCMeta
 
-    def __init__(self, value, value_type=None):
+    def __init__(self, value, value_type=None, resolved=False):
         super(Value, self).__init__(value_type if value_type else self.__class__.__name__)
         self.value = value
+        self.resolved = resolved
 
 
 class Term(Value):
@@ -321,6 +322,7 @@ class Term(Value):
         self.operand1 = operand1
         self.operand2 = operand2
         self.operator = operator
+        self.value = None
 
 
 class ParentExpression(Value):
@@ -329,6 +331,8 @@ class ParentExpression(Value):
     def __init__(self, term, value_type):
         super(ParentExpression, self).__init__(value=None, value_type=value_type)
         self.term = term
+        self.name = None
+        self.value = None
 
 
 class IntegerValue(Value):
@@ -355,32 +359,32 @@ class IntegerValue(Value):
             value_type = "UInt64"
         else:
             raise ASTException("Value {} out of integer limits!".format(value))
-        super(IntegerValue, self).__init__(value, value_type)
+        super(IntegerValue, self).__init__(value, value_type, resolved=True)
         self.base = base
 
 
 class BooleanValue(Value):
 
     def __init__(self, value):
-        super(BooleanValue, self).__init__(value, "Boolean")
+        super(BooleanValue, self).__init__(value, "Boolean", resolved=True)
 
 
 class FloatValue(Value):
 
     def __init__(self, value):
-        super(FloatValue, self).__init__(value, "Float")
+        super(FloatValue, self).__init__(value, "Float", resolved=True)
 
 
 class DoubleValue(Value):
 
     def __init__(self, value):
-        super(DoubleValue, self).__init__(value, "Double")
+        super(DoubleValue, self).__init__(value, "Double", resolved=True)
 
 
 class StringValue(Value):
 
     def __init__(self, value):
-        super(StringValue, self).__init__(value, "String")
+        super(StringValue, self).__init__(value, "String", resolved=True)
 
 
 class Enumeration(ComplexType):
@@ -466,6 +470,7 @@ class Constant(ComplexType):
         self.type = element_type
         self.value = element_value  # value from solved expression
         self.expression = element_expression
+        self.resolved = False
 
 
 class Reference(Type):
@@ -478,29 +483,33 @@ class Reference(Type):
 
 class ValueReference(Value):
 
-    def __init__(self, name, value=None):
-        super(ValueReference, self).__init__(value)
+    def __init__(self, name):
+        super(ValueReference, self).__init__(None)
         self.reference_name = name
-        self.name = None
         self.reference = None
+        self.value = None
+        self.name = None
 
 
-class InitializerExpressionArray:
+class InitializerExpressionArray(object):
 
     def __init__(self, elements=[]):
         self.elements = elements
+        self.resolved = False
 
 
-class InitializerExpressionStruct:
+class InitializerExpressionStruct(object):
 
     def __init__(self, elements=OrderedDict()):
         self.elements = elements
+        self.resolved = False
 
 
-class InitializerExpressionMap:
+class InitializerExpressionMap(object):
 
     def __init__(self, elements=[]):
         self.elements = elements
+        self.resolved = False
 
 
 class Interface(Namespace):

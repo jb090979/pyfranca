@@ -710,7 +710,6 @@ class TestReferences(BaseTestCase):
         self.processor.import_file(
             os.path.join(self.get_spec("idl2"), "P2.fidl"))
 
-
     def test_import_file_chain(self):
         fspec = self.tmp_fidl("P.fidl", """
             package P
@@ -835,8 +834,7 @@ class TestReferences(BaseTestCase):
             self.processor.import_file(fspec)
 
         self.assertEqual(str(context.exception),
-                     "Reference 'MyEnum' is ambiguous.")
-
+                         "Reference 'MyEnum' is ambiguous.")
 
     def test_model_import(self):
         self.tmp_fidl("common.fidl", """
@@ -876,13 +874,13 @@ class TestReferences(BaseTestCase):
                          out_args["out_t2"].type.reference.namespace.name, "T2")
 
     def test_type_notations(self):
-            self.tmp_fidl("test.fidl", """
+        self.tmp_fidl("test.fidl", """
                 package P
                 typeCollection TC {
                     typedef A is Int32
                 }
             """)
-            fspec = self.tmp_fidl("test2.fidl", """
+        fspec = self.tmp_fidl("test2.fidl", """
                 package P2
                 import P.TC.* from "test.fidl"
                 typeCollection TC2 {
@@ -899,40 +897,40 @@ class TestReferences(BaseTestCase):
                     typedef D2 is A
                 }
             """)
-            self.processor.import_file(fspec)
+        self.processor.import_file(fspec)
 
-            a = self.processor.packages["P"].typecollections["TC"].typedefs["A"]
-            self.assertTrue(isinstance(a.type, ast.Int32))
-            a2 = self.processor.packages["P2"].typecollections["TC2"].typedefs["A2"]
-            self.assertTrue(isinstance(a2.type, ast.UInt32))
-            b = self.processor.packages["P2"].interfaces["I"].typedefs["B"]
-            self.assertTrue(isinstance(b.type, ast.Reference))
-            self.assertEqual(b.type.name, "A2")
-            self.assertEqual(b.type.reference, a2)
-            b2 = self.processor.packages["P2"].interfaces["I"].typedefs["B2"]
-            self.assertTrue(isinstance(b2.type, ast.Reference))
-            self.assertEqual(b2.type.name, "A")
-            self.assertEqual(b2.type.reference, a)
+        a = self.processor.packages["P"].typecollections["TC"].typedefs["A"]
+        self.assertTrue(isinstance(a.type, ast.Int32))
+        a2 = self.processor.packages["P2"].typecollections["TC2"].typedefs["A2"]
+        self.assertTrue(isinstance(a2.type, ast.UInt32))
+        b = self.processor.packages["P2"].interfaces["I"].typedefs["B"]
+        self.assertTrue(isinstance(b.type, ast.Reference))
+        self.assertEqual(b.type.name, "A2")
+        self.assertEqual(b.type.reference, a2)
+        b2 = self.processor.packages["P2"].interfaces["I"].typedefs["B2"]
+        self.assertTrue(isinstance(b2.type, ast.Reference))
+        self.assertEqual(b2.type.name, "A")
+        self.assertEqual(b2.type.reference, a)
 
-            c = self.processor.packages["P2"].interfaces["I"].typedefs["C"]
-            self.assertTrue(isinstance(c.type, ast.Reference))
-            self.assertEqual(c.type.name, "A2")
-            self.assertEqual(c.type.reference, a2)
-            self.assertEqual(c.type.reference.namespace, self.processor.packages["P2"].typecollections["TC2"])
+        c = self.processor.packages["P2"].interfaces["I"].typedefs["C"]
+        self.assertTrue(isinstance(c.type, ast.Reference))
+        self.assertEqual(c.type.name, "A2")
+        self.assertEqual(c.type.reference, a2)
+        self.assertEqual(c.type.reference.namespace, self.processor.packages["P2"].typecollections["TC2"])
 
-            c2 = self.processor.packages["P2"].interfaces["I"].typedefs["C2"]
-            self.assertTrue(isinstance(c2.type, ast.Reference))
-            self.assertEqual(c2.type.name, "A")
-            self.assertEqual(c2.type.reference, a)
+        c2 = self.processor.packages["P2"].interfaces["I"].typedefs["C2"]
+        self.assertTrue(isinstance(c2.type, ast.Reference))
+        self.assertEqual(c2.type.name, "A")
+        self.assertEqual(c2.type.reference, a)
 
-            d = self.processor.packages["P2"].interfaces["I"].typedefs["D"]
-            self.assertTrue(isinstance(d.type, ast.Reference))
-            self.assertEqual(d.type.name, "A2")
-            self.assertEqual(d.type.reference, a2)
-            d2 = self.processor.packages["P2"].interfaces["I"].typedefs["D2"]
-            self.assertTrue(isinstance(d2.type, ast.Reference))
-            self.assertEqual(d2.type.name, "A")
-            self.assertEqual(d2.type.reference, a)
+        d = self.processor.packages["P2"].interfaces["I"].typedefs["D"]
+        self.assertTrue(isinstance(d.type, ast.Reference))
+        self.assertEqual(d.type.name, "A2")
+        self.assertEqual(d.type.reference, a2)
+        d2 = self.processor.packages["P2"].interfaces["I"].typedefs["D2"]
+        self.assertTrue(isinstance(d2.type, ast.Reference))
+        self.assertEqual(d2.type.name, "A")
+        self.assertEqual(d2.type.reference, a)
 
 
 class TestExpressions(BaseTestCase):
@@ -942,6 +940,8 @@ class TestExpressions(BaseTestCase):
         fspec = self.tmp_fidl("test.fidl", """
             package P
             typeCollection TC {
+                const UInt32 a = 4
+                const UInt32 b = 5
                 const UInt32 u3 = (( 3+ 4*5 ) / 3 * (5+-3))
                 const Boolean u4 = a+3*b-3 > 23
                 
@@ -974,8 +974,10 @@ class TestExpressions(BaseTestCase):
         self.processor.import_file(fspec)
         result_u3 = self.processor.print_constant(self.processor.packages["P"].typecollections["TC"].constants["u3"])
         result_u4 = self.processor.print_constant(self.processor.packages["P"].typecollections["TC"].constants["u4"])
-        result_uni1 = self.processor.print_constant(self.processor.packages["P"].typecollections["TC"].constants["uni1"])
-        result_uni2 = self.processor.print_constant(self.processor.packages["P"].typecollections["TC"].constants["uni2"])
+        result_uni1 = self.processor.print_constant(
+            self.processor.packages["P"].typecollections["TC"].constants["uni1"])
+        result_uni2 = self.processor.print_constant(
+            self.processor.packages["P"].typecollections["TC"].constants["uni2"])
         result_s1 = self.processor.print_constant(self.processor.packages["P"].typecollections["TC"].constants["s1"])
         result_empty = self.processor.print_constant(
             self.processor.packages["P"].typecollections["TC"].constants["empty"])
@@ -995,3 +997,100 @@ class TestExpressions(BaseTestCase):
         self.assertEqual(result_full, 'full = [ 1, 2, 2 + 3, 100 * 100 + 100 ]')
         self.assertEqual(result_m1, 'm1 = [ 1 => one, 2 => two ]')
         print("Stop here for debugging!")
+
+    def test_resolving_value_refrences(self):
+        self.tmp_fidl("test.fidl", """
+                       package P
+                       typeCollection TC {
+                           const UInt32 a = 4
+                           const UInt32 b = 5
+                           const String s = "hello"
+                       }
+                   """)
+
+        fspec = self.tmp_fidl("test1.fidl", """
+                   package P2
+    
+                   import P.TC.* from "test.fidl"
+    
+                   typeCollection TC2 {
+                          const UInt32 c = a + b
+    
+                          struct Struct1 
+                                {
+                                    Boolean e1
+                                    UInt16 e2
+                                    String e3
+                                }
+                          array Array1 of Struct1
+                          const Array1 a1 =  [ { e1: true, e2: a, e3: "foo" }, 
+                                                     { e1: false, e2:b, e3: "bar" }]
+    
+                          map Map1 { UInt16 to String }
+                          const Map1 m1 = [ a => "one", 2 => s ]
+                          
+                          const Boolean b1 = a + b < 5
+                   }
+               """)
+
+        self.processor.import_file(fspec)
+
+        ref_a = self.processor.packages["P"].typecollections["TC"].constants["a"]
+        ref_b = self.processor.packages["P"].typecollections["TC"].constants["b"]
+        ref_s = self.processor.packages["P"].typecollections["TC"].constants["s"]
+
+        constant = self.processor.packages["P2"].typecollections["TC2"].constants["c"]
+        self.assertTrue(isinstance(constant.expression, ast.Term))
+        self.assertTrue(isinstance(constant.expression.operand1, ast.ValueReference))
+        self.assertEqual(constant.expression.operand1.reference, ref_a)
+        self.assertEqual(constant.expression.operand1.value, 4)
+        self.assertEqual(constant.expression.operand1.name, "UInt32")
+        self.assertTrue(isinstance(constant.expression.operand2, ast.ValueReference))
+        self.assertEqual(constant.expression.operand2.reference, ref_b)
+        self.assertEqual(constant.expression.operand2.value, 5)
+        self.assertEqual(constant.expression.operand2.name, "UInt32")
+        self.assertEqual(constant.value, 9)
+        self.assertEqual(constant.type.name, "UInt32")
+
+        constant = self.processor.packages["P2"].typecollections["TC2"].constants["a1"]
+        self.assertTrue(isinstance(constant.expression, ast.InitializerExpressionArray))
+        self.assertTrue(isinstance(constant.expression.elements[0], ast.InitializerExpressionStruct))
+        self.assertTrue(isinstance(constant.expression.elements[0].elements["e2"], ast.ValueReference))
+        self.assertEqual(constant.expression.elements[0].elements["e2"].reference, ref_a)
+        self.assertEqual(constant.expression.elements[0].elements["e2"].name, ref_a.type.name)
+        self.assertEqual(constant.expression.elements[0].elements["e2"].value, ref_a.value)
+        self.assertEqual(constant.expression.elements[0].elements["e2"].comments, ref_a.comments)
+
+        self.assertTrue(isinstance(constant.expression.elements[1], ast.InitializerExpressionStruct))
+        self.assertTrue(isinstance(constant.expression.elements[1].elements["e2"], ast.ValueReference))
+        self.assertEqual(constant.expression.elements[1].elements["e2"].reference, ref_b)
+        self.assertEqual(constant.expression.elements[1].elements["e2"].reference, ref_b)
+        self.assertEqual(constant.expression.elements[1].elements["e2"].name, ref_b.type.name)
+        self.assertEqual(constant.expression.elements[1].elements["e2"].value, ref_b.value)
+        self.assertEqual(constant.expression.elements[1].elements["e2"].comments, ref_b.comments)
+
+        constant = self.processor.packages["P2"].typecollections["TC2"].constants["m1"]
+        self.assertTrue(isinstance(constant.expression, ast.InitializerExpressionMap))
+        self.assertTrue(isinstance(constant.expression.elements[0][0], ast.ValueReference))
+        self.assertEqual(constant.expression.elements[0][0].reference, ref_a)
+        self.assertEqual(constant.expression.elements[0][0].value, 4)
+        self.assertEqual(constant.expression.elements[0][0].name, "UInt32")
+        self.assertTrue(isinstance(constant.expression.elements[1][1], ast.ValueReference))
+        self.assertEqual(constant.expression.elements[1][1].reference, ref_s)
+        self.assertEqual(constant.expression.elements[1][1].value, "hello")
+        self.assertEqual(constant.expression.elements[1][1].name, "String")
+        self.assertEqual(constant.value, None)
+
+        constant = self.processor.packages["P2"].typecollections["TC2"].constants["b1"]
+        self.assertEqual(constant.value, False)
+        self.assertEqual(constant.type.name, "Boolean")
+
+
+
+        #bad cases
+        # const Uin8 a = 257
+        # const Uint16 b = 70000
+        # const Int16 c = -70000
+        # const Boolean b1 = 4
+        # const String s1 = 4
+        # const String s2 ? "Hello" + " " + "Welt!"
